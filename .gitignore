@@ -1,0 +1,49 @@
+# Byte-compiled Python files
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environment
+torch_env/
+.env/
+.venv/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+*.manifest
+
+# Compiled binary files
+*.pyd
+*.so
+*.dll
+*.lib
+*.exp
+*.obj
+
+# CUDA build artifacts
+**/*.ninja_deps
+**/*.ninja_log
+**/build.ninja
+
+# VSCode settings
+.vscode/
+
+# Logs and temporary files
+*.log
+*.tmp
+*.bak
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Ignore generated trees
+tree_structure.txt
+
+# Ignore any local test data
+test*.pyc
