@@ -53,7 +53,29 @@ class Forest:
         layer_leaf_prob: Optional[float] = None,
         const_range: Optional[Tuple[float, float]] = None,
         sample_cnt: Optional[int] = None,
-    ):
+    ) -> "Forest":
+        """
+        Randomly generate a forest.
+
+        Args:
+            pop_size: The population size of the forest.
+            gp_len: The length of each GP.
+            input_len: The number of inputs of each GP.
+            output_len: The number of outputs of each GP.
+            const_prob: The probability of generating a constant node.
+            out_prob (optional): The probability of generating an output node.
+            depth2leaf_probs (optional): The probability of generating a leaf node at each depth.
+            roulette_funcs (optional): The probability of generating each function.
+            const_samples (optional): The samples of constant values.
+            func_prob (optional): The probability of generating each function.
+            max_layer_cnt (optional): The maximum number of layers of the GP.
+            layer_leaf_prob (optional): The probability of generating a leaf node at each layer.
+            const_range (optional): The range of constant values.
+            sample_cnt (optional): The number of samples of constant values.
+
+        Returns:
+            A Forest object.
+        """
         assert (
             gp_len <= MAX_STACK
         ), f"gp_len={gp_len} is too large, MAX_STACK={MAX_STACK}"
@@ -148,7 +170,16 @@ class Forest:
             batch_subtree_size,
         )
 
-    def forward(self, x: Tensor):
+    def forward(self, x: Tensor) -> Tensor:
+        """
+        Evaluate the expression forest.
+
+        Args:
+            x: The input values. Shape should be (pop_size, input_len).
+
+        Returns:
+            The output values. Shape is (pop_size, output_len).
+        """
         x = check_tensor(x)
 
         assert x.shape == (
@@ -169,11 +200,24 @@ class Forest:
 
         return res
 
-    def mutate(self, replace_pos: Tensor, new_sub_forest: "Forest"):
+    def mutate(self, replace_pos: Tensor, new_sub_forest: "Forest") -> "Forest":
+        """
+        Mutate the current forest by replacing subtrees at specified positions
+        with new subtrees from a new_sub_forest.
+
+        Args:
+            replace_pos: A tensor indicating the positions to replace.
+            new_sub_forest: A Forest containing new subtrees for replacement.
+
+        Returns:
+            A new mutated Forest object.
+        """
         replace_pos = check_tensor(replace_pos)
+
+        # Validate shapes and dimensions
         assert replace_pos.shape == (
             self.pop_size,
-        ), f"replace_indices shape should be ({self.pop_size}, ), but got {replace_pos.shape}"
+        ), f"replace_pos shape should be ({self.pop_size}, ), but got {replace_pos.shape}"
         assert (
             self.pop_size == new_sub_forest.pop_size
         ), f"pop_size should be {self.pop_size}, but got {new_sub_forest.pop_size}"
@@ -187,6 +231,7 @@ class Forest:
             self.gp_len == new_sub_forest.gp_len
         ), f"gp_len should be {self.gp_len}, but got {new_sub_forest.gp_len}"
 
+        # Perform mutation operation using CUDA
         (
             batch_node_value,
             batch_node_type,
@@ -203,6 +248,7 @@ class Forest:
             new_sub_forest.batch_subtree_size,
         )
 
+        # Return a new Forest object with the mutated trees
         return Forest(
             self.input_len,
             self.output_len,
@@ -217,7 +263,19 @@ class Forest:
         right_indices: Tensor,
         left_pos: Tensor,
         right_pos: Tensor,
-    ):
+    ) -> "Forest":
+        """
+        Perform crossover operation.
+
+        Args:
+            left_indices (Tensor): indices of trees to be used as the left parent
+            right_indices (Tensor): indices of trees to be used as the right parent
+            left_pos (Tensor): subtree position in the left parent where the crossover happens
+            right_pos (Tensor): subtree position in the right parent where the crossover happens
+
+        Returns:
+            Forest: a new Forest object with the crossovered trees
+        """
         left_indices = check_tensor(left_indices)
         right_indices = check_tensor(right_indices)
         left_pos = check_tensor(left_pos)
@@ -263,7 +321,20 @@ class Forest:
             batch_subtree_size,
         )
 
-    def SR_fitness(self, inputs: Tensor, labels: Tensor, use_MSE: bool = True):
+    def SR_fitness(
+        self, inputs: Tensor, labels: Tensor, use_MSE: bool = True
+    ) -> Tensor:
+        """
+        Calculate the fitness of the current population using the SR metric.
+
+        Args:
+            inputs (Tensor): inputs to the GP trees
+            labels (Tensor): labels to compute the fitness
+            use_MSE (bool, optional): whether to use the Mean Squared Error (MSE) as the fitness metric. Defaults to True.
+
+        Returns:
+            Tensor: a tensor of shape (pop_size,) containing the fitness values
+        """
         inputs = check_tensor(inputs)
         labels = check_tensor(labels)
 
@@ -278,6 +349,7 @@ class Forest:
             self.output_len,
         ), f"outputs shape should be ({batch_size}, {self.output_len}), but got {labels.shape}"
 
+        # Perform SR fitness computation using CUDA
         res = torch.ops.evogp_cuda.tree_SR_fitness(
             self.pop_size,
             batch_size,
@@ -359,7 +431,8 @@ class Forest:
             raise StopIteration
 
     def __str__(self):
-        res = "[\n"
+        res = f"Forest(pop size: {self.pop_size})\n"
+        res += "[\n"
         for tree in self:
             res += f"  {str(tree)}, \n"
         res += "]"
@@ -372,13 +445,28 @@ class Forest:
         return self.pop_size
 
     def __add__(self, other):
-        assert isinstance(
-            other, Forest
-        ), f"other should be Forest, but got {type(other)}"
-        return Forest(
-            self.input_len,
-            self.output_len,
-            torch.cat([self.batch_node_value, other.batch_node_value], dim=0),
-            torch.cat([self.batch_node_type, other.batch_node_type], dim=0),
-            torch.cat([self.batch_subtree_size, other.batch_subtree_size], dim=0),
-        )
+        if isinstance(other, Forest):
+            return Forest(
+                self.input_len,
+                self.output_len,
+                torch.cat([self.batch_node_value, other.batch_node_value], dim=0),
+                torch.cat([self.batch_node_type, other.batch_node_type], dim=0),
+                torch.cat([self.batch_subtree_size, other.batch_subtree_size], dim=0),
+            )
+        if isinstance(other, Tree):
+            return Forest(
+                self.input_len,
+                self.output_len,
+                torch.cat(
+                    [self.batch_node_value, other.node_value.unsqueeze(0)], dim=0
+                ),
+                torch.cat([self.batch_node_type, other.node_type.unsqueeze(0)], dim=0),
+                torch.cat(
+                    [self.batch_subtree_size, other.subtree_size.unsqueeze(0)], dim=0
+                ),
+            )
+        else:
+            raise NotImplementedError
+
+    def __radd__(self, other):
+        return self.__add__(other)

@@ -17,14 +17,26 @@ from evogp.algorithm import (
 )
 
 XOR_INPUTS = torch.tensor(
-    [[0, 0, 0], [0, 0, 1], [0, 1, 0], [0, 1, 1], [1, 0, 0], [1, 0, 1], [1, 1, 0], [1, 1, 1]],
+    [
+        [0, 0, 0],
+        [0, 0, 1],
+        [0, 1, 0],
+        [0, 1, 1],
+        [1, 0, 0],
+        [1, 0, 1],
+        [1, 1, 0],
+        [1, 1, 1],
+    ],
     dtype=torch.float,
     requires_grad=False,
     device="cuda",
 )
 
 XOR_OUTPUTS = torch.tensor(
-    [[0], [1], [1], [0], [1], [0], [0], [1]], dtype=torch.float, requires_grad=False, device="cuda"
+    [[0], [1], [1], [0], [1], [0], [0], [1]],
+    dtype=torch.float,
+    requires_grad=False,
+    device="cuda",
 )
 
 
@@ -50,7 +62,12 @@ algorithm = GeneticProgramming(
 
 # initialize the forest
 forest = Forest.random_generate(
-    pop_size=1000000, gp_len=512, input_len=3, output_len=1, max_layer_cnt=5,**generate_configs
+    pop_size=1000000,
+    gp_len=512,
+    input_len=3,
+    output_len=1,
+    max_layer_cnt=5,
+    **generate_configs,
 )
 
 algorithm.initialize(forest)
@@ -61,4 +78,6 @@ for i in range(1000):
     forest = algorithm.step(fitness)
     fitness = evaluate(forest)
     toc = time.time()
-    print(f"step: {i}, max_fitness: {fitness.max()}, mean_fitness: {fitness.mean()}, time: {toc - tic}")
+    print(
+        f"step: {i}, max_fitness: {fitness.max()}, mean_fitness: {fitness.mean()}, time: {toc - tic}"
+    )
