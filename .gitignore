@@ -47,3 +47,6 @@ tree_structure.txt
 
 # Ignore any local test data
 test*.pyc
+
+# Ignore npy file
+*.npy
