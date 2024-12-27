@@ -43,6 +43,11 @@ inline void _gpTreeReplace(
 		auto node_type = type_stack[current];
 		node_type &= NodeType::TYPE_MASK;
 		current++;
+
+		if (current >= old_node_idx){  // actually, current == old_node_idx
+			break;
+		}
+
 		switch (node_type)
 		{
 		case NodeType::UFUNC:
