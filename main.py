@@ -3,10 +3,6 @@ import torch
 torch.random.manual_seed(0)
 torch.cuda.manual_seed(0)
 
-import sys
-
-sys.path.append(r"F:\evogp_torch\src")
-
 import time
 from evogp.tree import Tree, Forest, MAX_STACK
 from evogp.algorithm import (
