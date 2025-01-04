@@ -328,7 +328,7 @@ class Forest:
         )
 
     def SR_fitness(
-        self, inputs: Tensor, labels: Tensor, use_MSE: bool = True
+        self, inputs: Tensor, labels: Tensor, use_MSE: bool = True, execute_mode: str = "normal"
     ) -> Tensor:
         """
         Calculate the fitness of the current population using the SR metric.
@@ -355,6 +355,10 @@ class Forest:
             self.output_len,
         ), f"outputs shape should be ({batch_size}, {self.output_len}), but got {labels.shape}"
 
+        assert execute_mode in ["normal", "constant"], f"execute_mode should be 'normal' or 'constant', but got {execute_mode}"
+
+        execute_code = 0 if execute_mode == "normal" else 1
+
         # Perform SR fitness computation using CUDA
         res = torch.ops.evogp_cuda.tree_SR_fitness(
             self.pop_size,
@@ -368,6 +372,7 @@ class Forest:
             self.batch_subtree_size,
             inputs,
             labels,
+            execute_code
         )
 
         return res

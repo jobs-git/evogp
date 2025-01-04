@@ -2,7 +2,7 @@ import os
 from setuptools import setup
 from torch.utils.cpp_extension import CUDAExtension, BuildExtension
 
-os.environ["MAX_JOBS"] = "6"
+os.environ["MAX_JOBS"] = "16"
 
 setup(
     name="evogp",

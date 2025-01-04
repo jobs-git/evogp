@@ -92,7 +92,8 @@ void SR_fitness(
 	const int16_t* subtree_size,
 	const float* variables, 
 	const float* labels, 
-	float* fitnesses
+	float* fitnesses,
+	const unsigned int kernel_type = 0
 );
 
 struct GPNode

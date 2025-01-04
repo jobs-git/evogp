@@ -5,7 +5,225 @@
 
 // #undef CONST
 
-// __constant__ GPNode<double> _constGP[MAX_STACK];
+__constant__  float const_node_value[MAX_STACK];
+__constant__  int16_t const_node_type[MAX_STACK];
+__constant__ int16_t const_tree_size;
+
+template<bool multiOutput = false>
+__device__ inline void _process_node(
+	int16_t node_type,
+	float node_value,
+	const int outLen,
+	float* s_vars,
+	float* s_vals, // stack
+    float* s_outs,
+	int& top
+){
+	// for multiOutput
+	int16_t is_outNode = 0;
+	float right_node = 0;  
+	if constexpr (multiOutput)
+	{
+		is_outNode = node_type & (int16_t)NodeType::OUT_NODE;
+		node_type &= NodeType::TYPE_MASK;
+	}
+	// if the node is leaf
+	if (node_type == NodeType::CONST)
+	{
+		s_vals[top++] = node_value;
+		return;
+	}
+	else if (node_type == NodeType::VAR)
+	{
+		int var_num = (int)node_value;
+		s_vals[top++] = s_vars[var_num];
+		return;
+	}
+	
+	// not a leaf, will be function
+	unsigned int function, outIdx;
+	function = (unsigned int)node_value;
+	if constexpr (multiOutput) // value(float32) contains the function(int16_t) and outIndex(int16_t) info will using multiOutput mode
+	{
+		if (is_outNode)
+		{
+			OutNodeValue v = *(OutNodeValue*) & node_value;
+			function = v.function;
+			outIdx = v.outIndex;
+		}
+	}
+
+	float top_val{};
+	if (node_type == NodeType::UFUNC)
+	{
+		float var1 = s_vals[--top];
+
+		if constexpr (multiOutput){
+			right_node = var1;
+		}
+
+		if (function == Function::SIN)
+		{
+			top_val = std::sin(var1);
+		}
+		else if (function == Function::COS)
+		{
+			top_val = std::cos(var1);
+		}
+		else if (function == Function::SINH)
+		{
+			top_val = std::sinh(var1);
+		}
+		else if (function == Function::TAN)
+		{
+			top_val = std::tan(var1);
+		}
+		else if (function == Function::COSH)
+		{
+			top_val = std::cosh(var1);
+		}
+		else if (function == Function::TANH)
+		{
+			top_val = std::tanh(var1);
+		}
+		else if (function == Function::LOG)
+		{
+			if (var1 == 0.0f)
+			{
+				top_val = -MAX_VAL;
+			}
+			else
+			{
+				top_val = std::log(std::abs(var1));
+			}
+		}
+		else if (function == Function::INV)
+		{
+			if (std::abs(var1) <= DELTA)
+			{
+				var1 = copy_sign(DELTA, var1);
+			}
+			top_val = 1.0f / var1;
+		}
+		else if (function == Function::EXP)
+		{
+			top_val = std::exp(var1);
+		}
+		else if (function == Function::NEG)
+		{
+			top_val = -var1;
+		}
+		else if (function == Function::ABS)
+		{
+			top_val = std::abs(var1);
+		}
+		else if (function == Function::SQRT)
+		{
+			if (var1 <= 0.0f)
+			{
+				var1 = std::abs(var1);
+			}
+			top_val = std::sqrt(var1);
+		}
+	}
+	else if (node_type == NodeType::BFUNC)
+	{
+		float var1 = s_vals[--top];
+		float var2 = s_vals[--top];
+
+		if constexpr (multiOutput){
+			right_node = var2;
+		}
+
+		if (function == Function::ADD)
+		{
+			top_val = var1 + var2;
+		}
+		else if (function == Function::SUB)
+		{
+			top_val = var1 - var2;
+		}
+		else if (function == Function::MUL)
+		{
+			top_val = var1 * var2;
+		}
+		else if (function == Function::DIV)
+		{
+			if (std::abs(var2) <= DELTA)
+			{
+				var2 = copy_sign(DELTA, var2);
+			}
+			top_val = var1 / var2;
+		}
+		else if (function == Function::POW)
+		{
+			if (var1 == 0.0f && var2 == 0.0f)
+			{
+				top_val = 0.0f;
+			}
+			else
+			{
+				top_val = std::pow(std::abs(var1), var2);
+			}
+		}
+		else if (function == Function::MAX)
+		{
+			top_val = var1 >= var2 ? var1 : var2;
+		}
+		else if (function == Function::MIN)
+		{
+			top_val = var1 <= var2 ? var1 : var2;
+		}
+		else if (function == Function::LT)
+		{
+			top_val = var1 < var2 ? 1 : -1;
+		}
+		else if (function == Function::GT)
+		{
+			top_val = var1 > var2 ? 1 : -1;
+		}
+		else if (function == Function::LE)
+		{
+			top_val = var1 <= var2 ? 1 : -1;
+		}
+		else if (function == Function::GE)
+		{
+			top_val = var1 >= var2 ? 1 : -1;
+		}
+	}
+	else //// if (node_type == NodeType::TFUNC)
+	{
+		float var1 = s_vals[--top];
+		float var2 = s_vals[--top];
+		float var3 = s_vals[--top];
+		if constexpr (multiOutput){
+			right_node = var3;
+		}
+		//// if (function == Function::IF)
+		top_val = var1 > (0.0f) ? var2 : var3;
+	}
+
+	// clip value
+	if (is_nan(top_val))
+	{
+		top_val = .0f;
+	}
+	else if (is_inf(top_val) || std::abs(top_val) > MAX_VAL)
+	{	
+		top_val = copy_sign(MAX_VAL, top_val);
+	}
+
+	// multiple output
+	if constexpr (multiOutput)
+	{	
+		// Y. Zhang and M. Zhang, “A multiple-output program tree structure ingenetic programming,” in Proceedings of. Citeseer, 2004
+		if (is_outNode && outIdx < outLen)
+			s_outs[outIdx] += top_val;
+		top_val = right_node;  // pass right_value to its father
+	}
+	s_vals[top++] = top_val;
+}
+
 
 template<bool multiOutput = false>
 __device__ inline void _treeGPEvalByStack(
@@ -15,7 +233,6 @@ __device__ inline void _treeGPEvalByStack(
     const float* i_vars, // variables
     float* s_vals, // stack, size = MAX_STACK_SIZE
     int16_t* s_infos, // infos, size = 2 * MAX_STACK_SIZE
-    const unsigned int n, 
     const unsigned int popSize, 
     const unsigned int maxGPLen, 
     const unsigned int varLen, 
@@ -63,215 +280,13 @@ __device__ inline void _treeGPEvalByStack(
         // check node type
 		int16_t node_type = s_infos[i];
 		float node_value = s_vals[i];
-
-		// for multiOutput
-		int16_t is_outNode = 0;
-		float right_node = 0;  
-
-		if constexpr (multiOutput)
-		{
-			is_outNode = node_type & (int16_t)NodeType::OUT_NODE;
-			node_type &= NodeType::TYPE_MASK;
-		}
-
-		// if the node is leaf
-		if (node_type == NodeType::CONST)
-		{
-			s_vals[top++] = node_value;
-			continue;
-		}
-		else if (node_type == NodeType::VAR)
-		{
-			int var_num = (int)node_value;
-			s_vals[top++] = s_vars[var_num];
-			continue;
-		}
-
-		// not a leaf, will be function
-		unsigned int function, outIdx;
-		function = (unsigned int)node_value;
-		if constexpr (multiOutput) // value(float32) contains the function(int16_t) and outIndex(int16_t) info will using multiOutput mode
-		{
-			if (is_outNode)
-			{
-				OutNodeValue v = *(OutNodeValue*) & node_value;
-				function = v.function;
-				outIdx = v.outIndex;
-			}
-		}
-
-		float top_val{};
-		if (node_type == NodeType::UFUNC)
-		{
-			float var1 = s_vals[--top];
-
-			if constexpr (multiOutput){
-				right_node = var1;
-			}
-
-			if (function == Function::SIN)
-			{
-				top_val = std::sin(var1);
-			}
-			else if (function == Function::COS)
-			{
-				top_val = std::cos(var1);
-			}
-			else if (function == Function::SINH)
-			{
-				top_val = std::sinh(var1);
-			}
-			else if (function == Function::TAN)
-			{
-				top_val = std::tan(var1);
-			}
-			else if (function == Function::COSH)
-			{
-				top_val = std::cosh(var1);
-			}
-			else if (function == Function::TANH)
-			{
-				top_val = std::tanh(var1);
-			}
-			else if (function == Function::LOG)
-			{
-				if (var1 == 0.0f)
-				{
-					top_val = -MAX_VAL;
-				}
-				else
-				{
-					top_val = std::log(std::abs(var1));
-				}
-			}
-			else if (function == Function::INV)
-			{
-				if (std::abs(var1) <= DELTA)
-				{
-					var1 = copy_sign(DELTA, var1);
-				}
-				top_val = 1.0f / var1;
-			}
-			else if (function == Function::EXP)
-			{
-				top_val = std::exp(var1);
-			}
-			else if (function == Function::NEG)
-			{
-				top_val = -var1;
-			}
-			else if (function == Function::ABS)
-			{
-				top_val = std::abs(var1);
-			}
-			else if (function == Function::SQRT)
-			{
-				if (var1 <= 0.0f)
-				{
-					var1 = std::abs(var1);
-				}
-				top_val = std::sqrt(var1);
-			}
-		}
-		else if (node_type == NodeType::BFUNC)
-		{
-			float var1 = s_vals[--top];
-			float var2 = s_vals[--top];
-
-			if constexpr (multiOutput){
-				right_node = var2;
-			}
-
-			if (function == Function::ADD)
-			{
-				top_val = var1 + var2;
-			}
-			else if (function == Function::SUB)
-			{
-				top_val = var1 - var2;
-			}
-			else if (function == Function::MUL)
-			{
-				top_val = var1 * var2;
-			}
-			else if (function == Function::DIV)
-			{
-				if (std::abs(var2) <= DELTA)
-				{
-					var2 = copy_sign(DELTA, var2);
-				}
-				top_val = var1 / var2;
-			}
-			else if (function == Function::POW)
-			{
-				if (var1 == 0.0f && var2 == 0.0f)
-				{
-					top_val = 0.0f;
-				}
-				else
-				{
-					top_val = std::pow(std::abs(var1), var2);
-				}
-			}
-			else if (function == Function::MAX)
-			{
-				top_val = var1 >= var2 ? var1 : var2;
-			}
-			else if (function == Function::MIN)
-			{
-				top_val = var1 <= var2 ? var1 : var2;
-			}
-			else if (function == Function::LT)
-			{
-				top_val = var1 < var2 ? 1 : -1;
-			}
-			else if (function == Function::GT)
-			{
-				top_val = var1 > var2 ? 1 : -1;
-			}
-			else if (function == Function::LE)
-			{
-				top_val = var1 <= var2 ? 1 : -1;
-			}
-			else if (function == Function::GE)
-			{
-				top_val = var1 >= var2 ? 1 : -1;
-			}
-		}
-		else //// if (node_type == NodeType::TFUNC)
-		{
-			float var1 = s_vals[--top];
-			float var2 = s_vals[--top];
-			float var3 = s_vals[--top];
-			if constexpr (multiOutput){
-				right_node = var3;
-			}
-			//// if (function == Function::IF)
-			top_val = var1 > (0.0f) ? var2 : var3;
-		}
-
-		// clip value
-		if (is_nan(top_val))
-		{
-			top_val = .0f;
-		}
-		else if (is_inf(top_val) || std::abs(top_val) > MAX_VAL)
-		{	
-			top_val = copy_sign(MAX_VAL, top_val);
-		}
-
-		// multiple output
-		if constexpr (multiOutput)
-		{	
-			// Y. Zhang and M. Zhang, “A multiple-output program tree structure ingenetic programming,” in Proceedings of. Citeseer, 2004
-			if (is_outNode && outIdx < outLen)
-				s_outs[outIdx] += top_val;
-			top_val = right_node;  // pass right_value to its father
-		}
-
-		s_vals[top++] = top_val;
+		_process_node<multiOutput>(node_type, node_value, outLen, s_vars, s_vals, s_outs, top);
 	}
 	
+	if (top != 1)
+	{
+		printf("top: %d\n", top);
+	}
 	assert (top == 1);  // my personal guess
 }
 
@@ -317,7 +332,7 @@ __global__ void treeGPEvalKernel(
 	// call
 	float* s_outs{};  // output ptr. default is null. only used in multiOutput mode
 	int top{};  // stack ptr.
-	_treeGPEvalByStack<multiOutput>(i_value, i_type, i_subtree_size, i_vars, stack, infos, n, popSize, maxGPLen, varLen, outLen, s_outs, top);
+	_treeGPEvalByStack<multiOutput>(i_value, i_type, i_subtree_size, i_vars, stack, infos, popSize, maxGPLen, varLen, outLen, s_outs, top);
 	// final
 	if constexpr (multiOutput)
 	{	
@@ -358,6 +373,42 @@ void evaluate(
 
 constexpr auto SR_BLOCK_SIZE = 1024;
 
+
+template<bool multiOutput = false, bool useMSE = true>
+__device__ inline float calculate_fit(
+	const unsigned int dataPointId,
+	int top,
+	const float* stack,
+    const float* s_outs, 
+	const float* labels, 
+	const unsigned int outLen = 0
+){
+	float fit = .0f;
+	if constexpr (multiOutput)
+	{
+		auto i_labels = labels + dataPointId * outLen;
+		for (int i = 0; i < outLen; i++)
+		{
+			float diff = i_labels[i] - s_outs[i];
+			if constexpr (useMSE)
+				fit += diff * diff;
+			else
+				fit += std::abs(diff);  // abs
+		}
+	}
+	else
+	{
+		float output_value = stack[--top];
+		float diff = labels[dataPointId] - output_value;
+		if constexpr (useMSE)
+			fit = diff * diff;
+		else
+			fit = std::abs(diff);
+	}
+	return fit;
+}
+
+
 template<bool multiOutput = false, bool useMSE = true>
 __global__ void treeGPRegressionFitnessKernel(
 	const float* value, 
@@ -365,7 +416,7 @@ __global__ void treeGPRegressionFitnessKernel(
 	const int16_t* subtree_size, 
 	const float* variables, 
 	const float* labels, 
-	float* fitnesses, 
+	float* fitnesses, // len=(popSize, dataPoints)
 	const unsigned int popSize, 
 	const unsigned int dataPoints, 
 	const unsigned int maxGPLen, 
@@ -413,30 +464,8 @@ __global__ void treeGPRegressionFitnessKernel(
 		auto i_vars = variables + dataPointId * varLen;
 		float* s_outs{};
 		int top{};
-		_treeGPEvalByStack<multiOutput>(i_value, i_type, i_subtree_size, i_vars, stack, infos, nGP, popSize, maxGPLen, varLen, outLen, s_outs, top);
-		// accumulate
-		if constexpr (multiOutput)
-		{
-			auto i_labels = labels + dataPointId * outLen;
-			for (int i = 0; i < outLen; i++)
-			{
-				float diff = i_labels[i] - s_outs[i];
-				if constexpr (useMSE)
-					fit += diff * diff;
-				else
-					fit += std::abs(diff);  // abs
-			}
-		}
-		else
-		{
-			float output_value = stack[--top];
-			float diff = labels[dataPointId] - output_value;
-			if constexpr (useMSE)
-				fit = diff * diff;
-			else
-				fit = std::abs(diff);
-			// printf("thread_id: %d, nGP: %d, input: %f, datapoints: %d, dataPointId: %d, fit: %f, labels[dataPointId]: %f, output_value: %f, diff: %f\n", threadId, nGP, i_vars[0], dataPoints, dataPointId, fit, labels[dataPointId], output_value, diff);
-		}
+		_treeGPEvalByStack<multiOutput>(i_value, i_type, i_subtree_size, i_vars, stack, infos, popSize, maxGPLen, varLen, outLen, s_outs, top);
+		fit = calculate_fit<multiOutput, useMSE>(dataPointId, top, stack, s_outs, labels, outLen);
 	}
 	sharedFitness[threadId] = fit;
 
@@ -451,12 +480,13 @@ __global__ void treeGPRegressionFitnessKernel(
         __syncthreads();
     }
 
-    // 每个block只进行一次atomicAdd
+    // only one atomicAdd in each block
     if (threadId == 0)
     {
         atomicAdd(&fitnesses[nGP], sharedFitness[0]);
     }
 }
+
 
 
 __global__ void averageFitnessValueKernel(float* fitnesses, const unsigned int popSize, const unsigned int dataPoints){
@@ -466,8 +496,7 @@ __global__ void averageFitnessValueKernel(float* fitnesses, const unsigned int p
 	fitnesses[n] /= dataPoints;
 }
 
-
-void SR_fitness(
+void normal_SR_fitness(
 	const unsigned int popSize,
 	const unsigned int dataPoints,
 	const unsigned int gpLen,
@@ -505,3 +534,187 @@ void SR_fitness(
 	averageFitnessValueKernel<<<averagethreadBlocks, SR_BLOCK_SIZE>>>(fitnesses, popSize, dataPoints);
 }
 
+template<bool multiOutput = false>
+__device__ inline void _constant_treeGPEvalByStack(
+    const float* i_vars, // variables
+    float* s_vals, // stack, size = MAX_STACK_SIZE
+    int16_t* s_infos, // infos, size = 2 * MAX_STACK_SIZE
+    const unsigned int popSize, 
+    const unsigned int maxGPLen, 
+    const unsigned int varLen, 
+    const unsigned int outLen, 
+    float*& s_outs, 
+    int& top
+)
+{
+	float* s_vars = (float*)(s_infos + MAX_STACK);  // variable values on stack
+ 	if constexpr (multiOutput)  // outLen > 0, otherwise outLen = 0
+	{
+		s_outs = (float*)(s_infos + MAX_STACK + MAX_STACK / 2);
+        for (int i = 0; i < outLen; i++)
+        {
+            s_outs[i] = 0;  // output values on stack
+        }
+	}
+
+	// load variable values from global memory to stack memory
+	for (int i = 0; i < varLen; i++)
+	{
+		s_vars[i] = i_vars[i];
+	}
+    
+	// do stack operation according to the type of each node
+	top = 0;
+	for (int i = const_tree_size - 1; i >= 0; --i)
+	{
+        // check node type
+		int16_t node_type = const_node_type[i];
+		float node_value = const_node_value[i];
+		_process_node<multiOutput>(node_type, node_value, outLen, s_vars, s_vals, s_outs, top);
+	}
+	
+	if (top != 1)
+	{
+		printf("top: %d\n", top);
+	}
+	assert (top == 1);  // my personal guess
+}
+
+
+template<bool multiOutput = false, bool useMSE = true>
+__global__ void constant_treeGPRegressionFitnessKernel(
+	const int treeId,
+	const float* variables, 
+	const float* labels, 
+	float* fitnesses,
+	const unsigned int popSize, 
+	const unsigned int dataPoints, 
+	const unsigned int maxGPLen, 
+	const unsigned int varLen, 
+	const unsigned int outLen = 0
+)
+{	
+	
+	const unsigned int dataPointId = blockIdx.x * SR_BLOCK_SIZE + threadIdx.x, threadId = threadIdx.x;
+	__shared__ float sharedFitness[SR_BLOCK_SIZE];
+	sharedFitness[threadId] = .0f;
+
+	if (dataPointId >= dataPoints)
+		return;
+
+	if constexpr (multiOutput)
+	{
+		assert(outLen > 0);
+		assert(varLen * sizeof(float) / sizeof(int) <= MAX_STACK / 4);
+		assert(outLen * sizeof(float) / sizeof(int) <= MAX_STACK / 4);
+	}
+	else
+	{
+		assert(varLen * sizeof(float) / sizeof(int) <= MAX_STACK / 2);
+	}
+	
+	// init
+	float fit = .0f;
+	float* stack = (float*)alloca(MAX_STACK * sizeof(float));
+	int16_t* infos = (int16_t*)alloca(2 * MAX_STACK * sizeof(int16_t));
+
+	// current data point
+	auto i_vars = variables + dataPointId * varLen;
+	float* s_outs{};
+	int top{};
+	_constant_treeGPEvalByStack<multiOutput>(i_vars, stack, infos, popSize, maxGPLen, varLen, outLen, s_outs, top);
+	fit = calculate_fit<multiOutput, useMSE>(dataPointId, top, stack, s_outs, labels, outLen);
+
+	sharedFitness[threadId] = fit;
+
+	__syncthreads();
+
+    for (unsigned int size = SR_BLOCK_SIZE / 2; size > 0; size >>= 1)
+    {
+        if (threadId < size)
+        {
+            sharedFitness[threadId] += sharedFitness[threadId + size];
+        }
+        __syncthreads();
+    }
+
+    // only one atomicAdd in each block
+    if (threadId == 0)
+    {
+        atomicAdd(&fitnesses[treeId], sharedFitness[0]);
+    }
+}
+
+
+void constant_SR_fitness(
+	const unsigned int popSize,
+	const unsigned int dataPoints,
+	const unsigned int gpLen,
+	const unsigned int varLen,
+	const unsigned int outLen,
+	const bool useMSE,
+	const float* value,
+	const int16_t* type,
+	const int16_t* subtree_size,
+	const float* variables, 
+	const float* labels, 
+	float* fitnesses
+){
+	cudaMemsetAsync(fitnesses, 0, popSize * sizeof(float)); // clear fitnesses
+	const unsigned int threadBlocks = (dataPoints - 1) / SR_BLOCK_SIZE + 1;  // number of blocks for one individual
+	cudaDeviceSynchronize(); 
+	for (int i = 0; i < popSize; i++){
+		// copy tree to constant memory
+		auto current_node_value = value + i * gpLen;
+		auto current_node_type = type + i * gpLen;
+		auto current_subtree_size = subtree_size + i * gpLen; 
+
+		cudaMemcpyToSymbolAsync(const_node_value, current_node_value, gpLen * sizeof(float), 0, cudaMemcpyDeviceToDevice);
+		cudaMemcpyToSymbolAsync(const_node_type, current_node_type, gpLen * sizeof(int16_t), 0, cudaMemcpyDeviceToDevice);
+		cudaMemcpyToSymbolAsync(const_tree_size, current_subtree_size, sizeof(int16_t), 0, cudaMemcpyDeviceToDevice);
+
+		if (outLen > 1)
+		{
+			if (useMSE)
+				constant_treeGPRegressionFitnessKernel<true, true><<<threadBlocks, SR_BLOCK_SIZE>>>(i, variables, labels, fitnesses, popSize, dataPoints, gpLen, varLen, outLen);
+			else
+				constant_treeGPRegressionFitnessKernel<true, false><<<threadBlocks, SR_BLOCK_SIZE>>>(i, variables, labels, fitnesses, popSize, dataPoints, gpLen, varLen, outLen);
+		}
+		else
+		{
+			if (useMSE)
+				constant_treeGPRegressionFitnessKernel<false, true><<<threadBlocks, SR_BLOCK_SIZE>>>(i, variables, labels, fitnesses, popSize, dataPoints, gpLen, varLen, 0);
+			else
+				constant_treeGPRegressionFitnessKernel<false, false><<<threadBlocks, SR_BLOCK_SIZE>>>(i, variables, labels, fitnesses, popSize, dataPoints, gpLen, varLen, 0);
+		}
+	}
+	// average fitness value
+	int gridSize = 0, blockSize = 0;
+	cudaOccupancyMaxPotentialBlockSize(&gridSize, &blockSize, averageFitnessValueKernel);
+	averageFitnessValueKernel<<<gridSize, blockSize>>>(fitnesses, popSize, dataPoints);
+}
+
+
+void SR_fitness(
+	const unsigned int popSize,
+	const unsigned int dataPoints,
+	const unsigned int gpLen,
+	const unsigned int varLen,
+	const unsigned int outLen,
+	const bool useMSE,
+	const float* value,
+	const int16_t* type,
+	const int16_t* subtree_size,
+	const float* variables, 
+	const float* labels, 
+	float* fitnesses,
+	const unsigned int kernel_type
+)
+{
+	if (kernel_type == 0){
+		normal_SR_fitness(popSize, dataPoints, gpLen, varLen, outLen, useMSE, value, type, subtree_size, variables, labels, fitnesses);
+	}
+	else if (kernel_type == 1){
+		constant_SR_fitness(popSize, dataPoints, gpLen, varLen, outLen, useMSE, value, type, subtree_size, variables, labels, fitnesses);
+	}
+}

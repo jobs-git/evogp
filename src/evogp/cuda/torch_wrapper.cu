@@ -243,7 +243,8 @@ torch::Tensor tree_SR_fitness(
     torch::Tensor type,
     torch::Tensor subtree_size,
     torch::Tensor variables,
-    torch::Tensor labels
+    torch::Tensor labels,
+    int64_t kernel_type = 0
 ){
     // check parameters
     TORCH_CHECK(pop_size > 0, "pop_size must larger than 0, but got ", pop_size);
@@ -275,7 +276,8 @@ torch::Tensor tree_SR_fitness(
         subtree_size.data_ptr<int16_t>(),
         variables.data_ptr<float>(),
         labels.data_ptr<float>(),
-        fitness.data_ptr<float>()
+        fitness.data_ptr<float>(),
+        kernel_type
     );
     check_cuda_error("SR_fitness");
     return fitness;
@@ -293,7 +295,7 @@ TORCH_LIBRARY(evogp_cuda, m) {
     m.def("tree_mutate(int i1, int i2, Tensor t1, Tensor t2, Tensor t3, Tensor t4, Tensor t5, Tensor t6, Tensor t7) -> (Tensor t8, Tensor t9, Tensor t10)");
     m.def("tree_crossover(int i1, int i2, int i3, Tensor t1, Tensor t2, Tensor t3, Tensor t4, Tensor t5, Tensor t6, Tensor t7) -> (Tensor t8, Tensor t9, Tensor t10)");
     m.def("tree_evaluate(int i1, int i2, int i3, int i4, Tensor t1, Tensor t2, Tensor t3, Tensor t4) -> Tensor t5");
-    m.def("tree_SR_fitness(int i1, int i2, int i3, int i4, int i5, bool b1, Tensor t1, Tensor t2, Tensor t3, Tensor t4, Tensor t5) -> Tensor t6");
+    m.def("tree_SR_fitness(int i1, int i2, int i3, int i4, int i5, bool b1, Tensor t1, Tensor t2, Tensor t3, Tensor t4, Tensor t5, int i6) -> Tensor t6");
 }
 
 TORCH_LIBRARY_IMPL(evogp_cuda, CUDA, m) {
