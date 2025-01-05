@@ -10,6 +10,7 @@ from . import Tree
 class Forest:
 
     debug_mode = False
+    timmer_mode = False
 
     def __init__(
         self,
@@ -355,9 +356,15 @@ class Forest:
             self.output_len,
         ), f"outputs shape should be ({batch_size}, {self.output_len}), but got {labels.shape}"
 
-        assert execute_mode in ["normal", "constant"], f"execute_mode should be 'normal' or 'constant', but got {execute_mode}"
-
-        execute_code = 0 if execute_mode == "normal" else 1
+        assert execute_mode in ["normal", "tree_loop", "data_loop", "advanced"], f"execute_mode should be 'normal', 'tree_loop' or 'data_loop', but got {execute_mode}"
+        if execute_mode == "normal":
+            execute_code = 0
+        elif execute_mode == "tree_loop":
+            execute_code = 1
+        elif execute_mode == "data_loop":
+            execute_code = 2
+        elif execute_mode == "advanced":
+            execute_code = 3
 
         # Perform SR fitness computation using CUDA
         res = torch.ops.evogp_cuda.tree_SR_fitness(

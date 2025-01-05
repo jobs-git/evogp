@@ -16,7 +16,7 @@ setup(
                 "./src/evogp/cuda/forward.cu",
             ],
             extra_compile_args={
-                "cxx": ["-O2"],
+                "cxx": ["-O3"],
                 "nvcc": [
                     "-O2",
                     "--expt-relaxed-constexpr",

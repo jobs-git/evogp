@@ -8,6 +8,8 @@
 __constant__  float const_node_value[MAX_STACK];
 __constant__  int16_t const_node_type[MAX_STACK];
 __constant__ int16_t const_tree_size;
+__constant__ float const_variables[MAX_STACK];
+__constant__ float const_labels[MAX_STACK];
 
 template<bool multiOutput = false>
 __device__ inline void _process_node(
@@ -249,7 +251,7 @@ __device__ inline void _treeGPEvalByStack(
 			STACK_SIZE): tree types(int16_t), [MAX_STACK_SIZE, 1.5 * MAX_STACK_SIZE): variable values (float), [1.5 * MAX_STACK_SIZE, 2 * MAX_STACK_SIZE): output values (float)
 	*/
 	float* s_vars = (float*)(s_infos + MAX_STACK);  // variable values on stack
- 	if constexpr (multiOutput)  // outLen > 0, otherwise outLen = 0
+ 	if constexpr (multiOutput)  // outLen > 1, otherwise outLen = 1
 	{
 		s_outs = (float*)(s_infos + MAX_STACK + MAX_STACK / 2);
         for (int i = 0; i < outLen; i++)
@@ -309,7 +311,7 @@ __global__ void treeGPEvalKernel(
 		return;
 	if constexpr (multiOutput)
 	{
-		assert(outLen > 0);
+		assert(outLen > 1);
 		assert(varLen <= MAX_STACK / 4);
 		assert(outLen <= MAX_STACK / 4);  // variable and outputs will load into infos
 	}
@@ -368,7 +370,7 @@ void evaluate(
 	if (outLen > 1)
 		treeGPEvalKernel<true><<<gridSize, blockSize>>>(popSize, maxGPLen, varLen, outLen, value, type, subtree_size, variables, results);
 	else
-		treeGPEvalKernel<false><<<gridSize, blockSize>>>(popSize, maxGPLen, varLen, 0, value, type, subtree_size, variables, results);
+		treeGPEvalKernel<false><<<gridSize, blockSize>>>(popSize, maxGPLen, varLen, 1, value, type, subtree_size, variables, results);
 }
 
 constexpr auto SR_BLOCK_SIZE = 1024;
@@ -376,17 +378,15 @@ constexpr auto SR_BLOCK_SIZE = 1024;
 
 template<bool multiOutput = false, bool useMSE = true>
 __device__ inline float calculate_fit(
-	const unsigned int dataPointId,
 	int top,
 	const float* stack,
     const float* s_outs, 
-	const float* labels, 
-	const unsigned int outLen = 0
+	const float* i_labels, 
+	const unsigned int outLen = 1
 ){
 	float fit = .0f;
 	if constexpr (multiOutput)
 	{
-		auto i_labels = labels + dataPointId * outLen;
 		for (int i = 0; i < outLen; i++)
 		{
 			float diff = i_labels[i] - s_outs[i];
@@ -399,7 +399,7 @@ __device__ inline float calculate_fit(
 	else
 	{
 		float output_value = stack[--top];
-		float diff = labels[dataPointId] - output_value;
+		float diff = i_labels[0] - output_value;
 		if constexpr (useMSE)
 			fit = diff * diff;
 		else
@@ -421,24 +421,24 @@ __global__ void treeGPRegressionFitnessKernel(
 	const unsigned int dataPoints, 
 	const unsigned int maxGPLen, 
 	const unsigned int varLen, 
-	const unsigned int outLen = 0
+	const unsigned int outLen = 1
 )
 /**
  * gps: [popSize * maxLen]
 */
 {
-	const unsigned int maxThreadBlocks = (dataPoints - 1) / SR_BLOCK_SIZE + 1;
+	const unsigned int block_cnt_per_tree = (dataPoints - 1) / blockDim.x + 1;
 	const unsigned int nGP = blockIdx.x, nTB = blockIdx.y, threadId = threadIdx.x;
-	const unsigned int dataPointId = nTB * SR_BLOCK_SIZE + threadId;
+	const unsigned int dataPointId = nTB * blockDim.x + threadId;
 
 	__shared__ float sharedFitness[SR_BLOCK_SIZE];
 	sharedFitness[threadId] = .0f;
 
-	if (nGP >= popSize || nTB >= maxThreadBlocks)
+	if (nGP >= popSize || nTB >= block_cnt_per_tree || dataPointId >= dataPoints)
 		return;
 	if constexpr (multiOutput)
 	{
-		assert(outLen > 0);
+		assert(outLen > 1);
 		assert(varLen * sizeof(float) / sizeof(int) <= MAX_STACK / 4);
 		assert(outLen * sizeof(float) / sizeof(int) <= MAX_STACK / 4);
 	}
@@ -458,22 +458,20 @@ __global__ void treeGPRegressionFitnessKernel(
     auto i_subtree_size = subtree_size + nGP * maxGPLen;
 
 	// evaluate over data points
-	if (dataPointId < dataPoints)
-	{
-		// eval
-		auto i_vars = variables + dataPointId * varLen;
-		float* s_outs{};
-		int top{};
-		_treeGPEvalByStack<multiOutput>(i_value, i_type, i_subtree_size, i_vars, stack, infos, popSize, maxGPLen, varLen, outLen, s_outs, top);
-		fit = calculate_fit<multiOutput, useMSE>(dataPointId, top, stack, s_outs, labels, outLen);
-	}
+	auto i_vars = variables + dataPointId * varLen;
+	auto i_labels = labels + dataPointId * outLen;
+	float* s_outs{};
+	int top{};
+	_treeGPEvalByStack<multiOutput>(i_value, i_type, i_subtree_size, i_vars, stack, infos, popSize, maxGPLen, varLen, outLen, s_outs, top);
+	fit = calculate_fit<multiOutput, useMSE>(top, stack, s_outs, i_labels, outLen);
+	
 	sharedFitness[threadId] = fit;
 
 	__syncthreads();
 
     for (unsigned int size = SR_BLOCK_SIZE / 2; size > 0; size >>= 1)
     {
-        if (threadId < size)
+        if (threadId < size && threadId + size < blockDim.x)
         {
             sharedFitness[threadId] += sharedFitness[threadId + size];
         }
@@ -524,9 +522,9 @@ void normal_SR_fitness(
 	else
 	{
 		if (useMSE)
-			treeGPRegressionFitnessKernel<false, true><<<gridSize, SR_BLOCK_SIZE>>>(value, type, subtree_size, variables, labels, fitnesses, popSize, dataPoints, gpLen, varLen, 0); 
+			treeGPRegressionFitnessKernel<false, true><<<gridSize, SR_BLOCK_SIZE>>>(value, type, subtree_size, variables, labels, fitnesses, popSize, dataPoints, gpLen, varLen, 1); 
 		else
-			treeGPRegressionFitnessKernel<false, false><<<gridSize, SR_BLOCK_SIZE>>>(value, type, subtree_size, variables, labels, fitnesses, popSize, dataPoints, gpLen, varLen, 0); 
+			treeGPRegressionFitnessKernel<false, false><<<gridSize, SR_BLOCK_SIZE>>>(value, type, subtree_size, variables, labels, fitnesses, popSize, dataPoints, gpLen, varLen, 1); 
 	}
 
 	// average fitness value
@@ -534,8 +532,55 @@ void normal_SR_fitness(
 	averageFitnessValueKernel<<<averagethreadBlocks, SR_BLOCK_SIZE>>>(fitnesses, popSize, dataPoints);
 }
 
+void advanced_SR_fitness(
+	const unsigned int popSize,
+	const unsigned int dataPoints,
+	const unsigned int gpLen,
+	const unsigned int varLen,
+	const unsigned int outLen,
+	const bool useMSE,
+	const float* value,
+	const int16_t* type,
+	const int16_t* subtree_size,
+	const float* variables, 
+	const float* labels, 
+	float* fitnesses
+)
+{
+	auto err = cudaMemsetAsync(fitnesses, 0, popSize * sizeof(float));  // clear fitnesses
+	unsigned int block_cnt_per_tree, block_size;
+	block_size = dataPoints < SR_BLOCK_SIZE ? dataPoints : SR_BLOCK_SIZE;
+	block_cnt_per_tree = (dataPoints - 1) / block_size + 1;
+	dim3 gridSize{popSize, block_cnt_per_tree};  // total blocks
+
+	if (outLen > 1)
+	{
+		if (useMSE)
+			treeGPRegressionFitnessKernel<true, true><<<gridSize, block_size>>>(value, type, subtree_size, variables, labels, fitnesses, popSize, dataPoints, gpLen, varLen, outLen);   
+		else
+			treeGPRegressionFitnessKernel<true, false><<<gridSize, block_size>>>(value, type, subtree_size, variables, labels, fitnesses, popSize, dataPoints, gpLen, varLen, outLen); 
+	}
+	else
+	{
+		if (useMSE)
+			treeGPRegressionFitnessKernel<false, true><<<gridSize, block_size>>>(value, type, subtree_size, variables, labels, fitnesses, popSize, dataPoints, gpLen, varLen, 1); 
+		else
+			treeGPRegressionFitnessKernel<false, false><<<gridSize, block_size>>>(value, type, subtree_size, variables, labels, fitnesses, popSize, dataPoints, gpLen, varLen, 1); 
+	}
+
+	// average fitness value
+	int g = 0, b = 0;
+	cudaOccupancyMaxPotentialBlockSize(&g, &b, averageFitnessValueKernel);
+	if(g * b < popSize)
+		g = (popSize - 1) / b + 1;
+	averageFitnessValueKernel<<<g, b>>>(fitnesses, popSize, dataPoints);
+}
+
+
+
+
 template<bool multiOutput = false>
-__device__ inline void _constant_treeGPEvalByStack(
+__device__ inline void _constant_tree_treeGPEvalByStack(
     const float* i_vars, // variables
     float* s_vals, // stack, size = MAX_STACK_SIZE
     int16_t* s_infos, // infos, size = 2 * MAX_STACK_SIZE
@@ -548,7 +593,7 @@ __device__ inline void _constant_treeGPEvalByStack(
 )
 {
 	float* s_vars = (float*)(s_infos + MAX_STACK);  // variable values on stack
- 	if constexpr (multiOutput)  // outLen > 0, otherwise outLen = 0
+ 	if constexpr (multiOutput)  // outLen > 1, otherwise outLen = 1
 	{
 		s_outs = (float*)(s_infos + MAX_STACK + MAX_STACK / 2);
         for (int i = 0; i < outLen; i++)
@@ -582,7 +627,7 @@ __device__ inline void _constant_treeGPEvalByStack(
 
 
 template<bool multiOutput = false, bool useMSE = true>
-__global__ void constant_treeGPRegressionFitnessKernel(
+__global__ void constant_tree_treeGPRegressionFitnessKernel(
 	const int treeId,
 	const float* variables, 
 	const float* labels, 
@@ -591,10 +636,9 @@ __global__ void constant_treeGPRegressionFitnessKernel(
 	const unsigned int dataPoints, 
 	const unsigned int maxGPLen, 
 	const unsigned int varLen, 
-	const unsigned int outLen = 0
+	const unsigned int outLen = 1
 )
 {	
-	
 	const unsigned int dataPointId = blockIdx.x * SR_BLOCK_SIZE + threadIdx.x, threadId = threadIdx.x;
 	__shared__ float sharedFitness[SR_BLOCK_SIZE];
 	sharedFitness[threadId] = .0f;
@@ -604,7 +648,7 @@ __global__ void constant_treeGPRegressionFitnessKernel(
 
 	if constexpr (multiOutput)
 	{
-		assert(outLen > 0);
+		assert(outLen > 1);
 		assert(varLen * sizeof(float) / sizeof(int) <= MAX_STACK / 4);
 		assert(outLen * sizeof(float) / sizeof(int) <= MAX_STACK / 4);
 	}
@@ -620,10 +664,12 @@ __global__ void constant_treeGPRegressionFitnessKernel(
 
 	// current data point
 	auto i_vars = variables + dataPointId * varLen;
+	auto i_labels = labels + dataPointId * outLen;
+
 	float* s_outs{};
 	int top{};
-	_constant_treeGPEvalByStack<multiOutput>(i_vars, stack, infos, popSize, maxGPLen, varLen, outLen, s_outs, top);
-	fit = calculate_fit<multiOutput, useMSE>(dataPointId, top, stack, s_outs, labels, outLen);
+	_constant_tree_treeGPEvalByStack<multiOutput>(i_vars, stack, infos, popSize, maxGPLen, varLen, outLen, s_outs, top);
+	fit = calculate_fit<multiOutput, useMSE>(top, stack, s_outs, i_labels, outLen);
 
 	sharedFitness[threadId] = fit;
 
@@ -646,7 +692,7 @@ __global__ void constant_treeGPRegressionFitnessKernel(
 }
 
 
-void constant_SR_fitness(
+void constant_tree_SR_fitness(
 	const unsigned int popSize,
 	const unsigned int dataPoints,
 	const unsigned int gpLen,
@@ -662,7 +708,6 @@ void constant_SR_fitness(
 ){
 	cudaMemsetAsync(fitnesses, 0, popSize * sizeof(float)); // clear fitnesses
 	const unsigned int threadBlocks = (dataPoints - 1) / SR_BLOCK_SIZE + 1;  // number of blocks for one individual
-	cudaDeviceSynchronize(); 
 	for (int i = 0; i < popSize; i++){
 		// copy tree to constant memory
 		auto current_node_value = value + i * gpLen;
@@ -676,23 +721,175 @@ void constant_SR_fitness(
 		if (outLen > 1)
 		{
 			if (useMSE)
-				constant_treeGPRegressionFitnessKernel<true, true><<<threadBlocks, SR_BLOCK_SIZE>>>(i, variables, labels, fitnesses, popSize, dataPoints, gpLen, varLen, outLen);
+				constant_tree_treeGPRegressionFitnessKernel<true, true><<<threadBlocks, SR_BLOCK_SIZE>>>(i, variables, labels, fitnesses, popSize, dataPoints, gpLen, varLen, outLen);
 			else
-				constant_treeGPRegressionFitnessKernel<true, false><<<threadBlocks, SR_BLOCK_SIZE>>>(i, variables, labels, fitnesses, popSize, dataPoints, gpLen, varLen, outLen);
+				constant_tree_treeGPRegressionFitnessKernel<true, false><<<threadBlocks, SR_BLOCK_SIZE>>>(i, variables, labels, fitnesses, popSize, dataPoints, gpLen, varLen, outLen);
 		}
 		else
 		{
 			if (useMSE)
-				constant_treeGPRegressionFitnessKernel<false, true><<<threadBlocks, SR_BLOCK_SIZE>>>(i, variables, labels, fitnesses, popSize, dataPoints, gpLen, varLen, 0);
+				constant_tree_treeGPRegressionFitnessKernel<false, true><<<threadBlocks, SR_BLOCK_SIZE>>>(i, variables, labels, fitnesses, popSize, dataPoints, gpLen, varLen, 1);
 			else
-				constant_treeGPRegressionFitnessKernel<false, false><<<threadBlocks, SR_BLOCK_SIZE>>>(i, variables, labels, fitnesses, popSize, dataPoints, gpLen, varLen, 0);
+				constant_tree_treeGPRegressionFitnessKernel<false, false><<<threadBlocks, SR_BLOCK_SIZE>>>(i, variables, labels, fitnesses, popSize, dataPoints, gpLen, varLen, 1);
 		}
 	}
 	// average fitness value
 	int gridSize = 0, blockSize = 0;
 	cudaOccupancyMaxPotentialBlockSize(&gridSize, &blockSize, averageFitnessValueKernel);
+	if(gridSize * blockSize < popSize)
+		gridSize = (popSize - 1) / blockSize + 1;
 	averageFitnessValueKernel<<<gridSize, blockSize>>>(fitnesses, popSize, dataPoints);
 }
+
+
+template<bool multiOutput = false>
+__device__ inline void _constant_vars_treeGPEvalByStack(
+    const float* value,
+    const int16_t* type,
+    const int16_t* subtree_size,
+    float* s_vals, // stack, size = MAX_STACK_SIZE
+    int16_t* s_infos, // infos, size = 2 * MAX_STACK_SIZE
+    const unsigned int popSize, 
+    const unsigned int maxGPLen, 
+    const unsigned int varLen, 
+    const unsigned int outLen, 
+    float*& s_outs, 
+    int& top
+)
+{
+ 	if constexpr (multiOutput)  // outLen > 1, otherwise outLen = 1
+	{
+		s_outs = (float*)(s_infos + MAX_STACK + MAX_STACK / 2);
+        for (int i = 0; i < outLen; i++)
+        {
+            s_outs[i] = 0;  // output values on stack
+        }
+	}
+
+	const unsigned int len = subtree_size[0];
+    // load tree from global memory to stack memory
+	// the order is: the inverse of prefix expression
+	for (int i = 0; i < len; i++)
+	{
+		s_vals[len - 1 - i] = value[i];
+		s_infos[len - 1 - i] = type[i];
+	}
+
+	// do stack operation according to the type of each node
+	top = 0;
+	for (int i = 0; i < len; i++)
+	{
+        // check node type
+		int16_t node_type = s_infos[i];
+		float node_value = s_vals[i];
+		_process_node<multiOutput>(node_type, node_value, outLen, const_variables, s_vals, s_outs, top);
+	}
+	
+	if (top != 1)
+	{
+		printf("top: %d\n", top);
+	}
+	assert (top == 1);  // my personal guess
+}
+
+template<bool multiOutput = false, bool useMSE = true>
+__global__ void constant_vars_treeGPRegressionFitnessKernel(
+    const float* value,
+    const int16_t* type,
+    const int16_t* subtree_size,
+	float* fitnesses,
+	const unsigned int popSize, 
+	const unsigned int dataPoints, 
+	const unsigned int maxGPLen, 
+	const unsigned int varLen, 
+	const unsigned int outLen = 1
+)
+{	
+	const unsigned int treeId = blockIdx.x * blockDim.x + threadIdx.x;
+
+	if (treeId >= popSize)
+		return;
+
+	if constexpr (multiOutput)
+	{
+		assert(outLen > 1);
+		assert(varLen * sizeof(float) / sizeof(int) <= MAX_STACK / 4);
+		assert(outLen * sizeof(float) / sizeof(int) <= MAX_STACK / 4);
+	}
+	else
+	{
+		assert(varLen * sizeof(float) / sizeof(int) <= MAX_STACK / 2);
+	}
+	
+	// init
+	float fit = .0f;
+	float* stack = (float*)alloca(MAX_STACK * sizeof(float));
+	int16_t* infos = (int16_t*)alloca(2 * MAX_STACK * sizeof(int16_t));
+
+	// current tree
+	auto i_value = value + treeId * maxGPLen;
+	auto i_type = type + treeId * maxGPLen;
+	auto i_subtree_size = subtree_size + treeId * maxGPLen;
+
+	float* s_outs{};
+	int top{};
+	_constant_vars_treeGPEvalByStack<multiOutput>(i_value, i_type, i_subtree_size, stack, infos, popSize, maxGPLen, varLen, outLen, s_outs, top);
+	fit = calculate_fit<multiOutput, useMSE>(top, stack, s_outs, const_labels, outLen);
+
+	// there are no conflicts at all, so no need to lock
+	fitnesses[treeId] += fit;
+}
+
+void constant_vars_SR_fitness(
+	const unsigned int popSize,
+	const unsigned int dataPoints,
+	const unsigned int gpLen,
+	const unsigned int varLen,
+	const unsigned int outLen,
+	const bool useMSE,
+	const float* value,
+	const int16_t* type,
+	const int16_t* subtree_size,
+	const float* variables, 
+	const float* labels, 
+	float* fitnesses
+){
+	int gridSize = 0, blockSize = 0;
+	cudaOccupancyMaxPotentialBlockSize(&gridSize, &blockSize, constant_vars_treeGPRegressionFitnessKernel<false, true>);
+	if (gridSize * blockSize < popSize)
+		gridSize = (popSize - 1) / blockSize + 1;
+
+	cudaMemsetAsync(fitnesses, 0, popSize * sizeof(float)); // clear fitnesses
+	for (int i = 0; i < dataPoints; i++){
+		// copy vars and labels to constant memory
+		auto current_variables = variables + i * varLen;
+		auto current_labels = labels + i * outLen;
+
+		cudaMemcpyToSymbolAsync(const_variables, current_variables, varLen * sizeof(float), 0, cudaMemcpyDeviceToDevice);
+		cudaMemcpyToSymbolAsync(const_labels, current_labels, outLen * sizeof(float), 0, cudaMemcpyDeviceToDevice);
+
+		if (outLen > 1)
+		{
+			if (useMSE)
+				constant_vars_treeGPRegressionFitnessKernel<true, true><<<gridSize, blockSize>>>(value, type, subtree_size, fitnesses, popSize, dataPoints, gpLen, varLen, outLen);
+			else
+				constant_vars_treeGPRegressionFitnessKernel<true, false><<<gridSize, blockSize>>>(value, type, subtree_size, fitnesses, popSize, dataPoints, gpLen, varLen, outLen);
+		}
+		else
+		{
+			if (useMSE)
+				constant_vars_treeGPRegressionFitnessKernel<false, true><<<gridSize, blockSize>>>(value, type, subtree_size, fitnesses, popSize, dataPoints, gpLen, varLen, 1);
+			else
+				constant_vars_treeGPRegressionFitnessKernel<false, false><<<gridSize, blockSize>>>(value, type, subtree_size, fitnesses, popSize, dataPoints, gpLen, varLen, 1);
+		}
+	}
+	// average fitness value
+	cudaOccupancyMaxPotentialBlockSize(&gridSize, &blockSize, averageFitnessValueKernel);
+	if(gridSize * blockSize < popSize)
+		gridSize = (popSize - 1) / blockSize + 1;
+	averageFitnessValueKernel<<<gridSize, blockSize>>>(fitnesses, popSize, dataPoints);
+}
+
 
 
 void SR_fitness(
@@ -715,6 +912,11 @@ void SR_fitness(
 		normal_SR_fitness(popSize, dataPoints, gpLen, varLen, outLen, useMSE, value, type, subtree_size, variables, labels, fitnesses);
 	}
 	else if (kernel_type == 1){
-		constant_SR_fitness(popSize, dataPoints, gpLen, varLen, outLen, useMSE, value, type, subtree_size, variables, labels, fitnesses);
+		constant_tree_SR_fitness(popSize, dataPoints, gpLen, varLen, outLen, useMSE, value, type, subtree_size, variables, labels, fitnesses);
+	}
+	else if (kernel_type == 2){
+		constant_vars_SR_fitness(popSize, dataPoints, gpLen, varLen, outLen, useMSE, value, type, subtree_size, variables, labels, fitnesses);
+	} else if(kernel_type == 3){
+		advanced_SR_fitness(popSize, dataPoints, gpLen, varLen, outLen, useMSE, value, type, subtree_size, variables, labels, fitnesses);
 	}
 }
