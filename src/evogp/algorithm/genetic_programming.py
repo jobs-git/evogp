@@ -22,15 +22,15 @@ class GeneticProgramming:
         self.forest = forest
         self.pop_size = forest.pop_size
 
-    def step(self, fitness: torch.Tensor):
+    def step(self, fitness: torch.Tensor, args_check: bool = True):
         assert self.forest is not None, "forest is not initialized"
         assert fitness.shape == (
             self.forest.pop_size,
         ), "fitness shape should be ({self.forest.pop_size}, ), but got {fitness.shape}"
 
         elite_forest, next_forest = self.selection(self.forest, fitness)
-        next_forest = self.crossover(next_forest, self.pop_size - len(elite_forest))
-        next_forest = self.mutation(next_forest)
+        next_forest = self.crossover(next_forest, self.pop_size - len(elite_forest), args_check=args_check)
+        next_forest = self.mutation(next_forest, args_check=args_check)
         self.forest = elite_forest + next_forest
         
         return self.forest

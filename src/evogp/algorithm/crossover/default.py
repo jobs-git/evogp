@@ -9,7 +9,7 @@ class DefaultCrossover(BaseCrossover):
     def __init__(self):
         super().__init__()
 
-    def __call__(self, forest: Forest, target_cnt: int):
+    def __call__(self, forest: Forest, target_cnt: int, args_check: bool = True):
         forest_size = forest.pop_size
 
         # choose left and right indices
@@ -27,4 +27,4 @@ class DefaultCrossover(BaseCrossover):
 
         # print(f"{tree_sizes=}\n{left_indices=}\n{right_indices=}\n{left_pos=}\n{right_pos=}")
 
-        return forest.crossover(left_indices, right_indices, left_pos, right_pos)
+        return forest.crossover(left_indices, right_indices, left_pos, right_pos, args_check=args_check)

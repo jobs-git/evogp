@@ -64,6 +64,7 @@ class Forest:
         layer_leaf_prob: Optional[float] = None,
         const_range: Optional[Tuple[float, float]] = None,
         sample_cnt: Optional[int] = None,
+        args_check: bool = True,
     ) -> "Forest":
         """
         Randomly generate a forest.
@@ -87,6 +88,82 @@ class Forest:
         Returns:
             A Forest object.
         """
+
+        if args_check:
+            generate_configs = Forest.random_generate_check(
+                pop_size,
+                gp_len,
+                input_len,
+                output_len,
+                const_prob,
+                out_prob,
+                depth2leaf_probs,
+                roulette_funcs,
+                const_samples,
+                func_prob,
+                max_layer_cnt,
+                layer_leaf_prob,
+                const_range,
+                sample_cnt,
+            )
+            const_prob = generate_configs["const_prob"]
+            out_prob = generate_configs["out_prob"]
+            depth2leaf_probs = generate_configs["depth2leaf_probs"]
+            roulette_funcs = generate_configs["roulette_funcs"]
+            const_samples = generate_configs["const_samples"]
+
+        keys = torch.randint(
+            low=0,
+            high=1000000,
+            size=(2,),
+            dtype=torch.uint32,
+            device="cuda",
+            requires_grad=False,
+        )
+
+        (
+            batch_node_value,
+            batch_node_type,
+            batch_subtree_size,
+        ) = torch.ops.evogp_cuda.tree_generate(
+            pop_size,
+            gp_len,
+            input_len,
+            output_len,
+            const_samples.shape[0],
+            out_prob,
+            const_prob,
+            keys,
+            depth2leaf_probs,
+            roulette_funcs,
+            const_samples,
+        )
+
+        return Forest(
+            input_len,
+            output_len,
+            batch_node_value,
+            batch_node_type,
+            batch_subtree_size,
+        )
+
+    @staticmethod
+    def random_generate_check(
+        pop_size: int,
+        gp_len: int,
+        input_len: int,
+        output_len: int,
+        const_prob: float,
+        out_prob: Optional[float] = None,
+        depth2leaf_probs: Optional[Tensor] = None,
+        roulette_funcs: Optional[Tensor] = None,
+        const_samples: Optional[Tensor] = None,
+        func_prob: Optional[dict] = None,
+        max_layer_cnt: Optional[int] = None,
+        layer_leaf_prob: Optional[float] = None,
+        const_range: Optional[Tuple[float, float]] = None,
+        sample_cnt: Optional[int] = None,
+    ):
         assert (
             gp_len <= MAX_STACK
         ), f"gp_len={gp_len} is too large, MAX_STACK={MAX_STACK}"
@@ -146,42 +223,15 @@ class Forest:
             const_samples.dim() == 1
         ), f"const_samples dim should be 1, but got {const_samples.dim()}"
 
-        keys = torch.randint(
-            low=0,
-            high=1000000,
-            size=(2,),
-            dtype=torch.uint32,
-            device="cuda",
-            requires_grad=False,
-        )
+        return {
+            "const_prob": const_prob,
+            "out_prob": out_prob,
+            "depth2leaf_probs": depth2leaf_probs,
+            "roulette_funcs": roulette_funcs,
+            "const_samples": const_samples,
+        }
 
-        (
-            batch_node_value,
-            batch_node_type,
-            batch_subtree_size,
-        ) = torch.ops.evogp_cuda.tree_generate(
-            pop_size,
-            gp_len,
-            input_len,
-            output_len,
-            const_samples.shape[0],
-            out_prob,
-            const_prob,
-            keys,
-            depth2leaf_probs,
-            roulette_funcs,
-            const_samples,
-        )
-
-        return Forest(
-            input_len,
-            output_len,
-            batch_node_value,
-            batch_node_type,
-            batch_subtree_size,
-        )
-
-    def forward(self, x: Tensor) -> Tensor:
+    def forward(self, x: Tensor, args_check=True) -> Tensor:
         """
         Evaluate the expression forest.
 
@@ -191,12 +241,8 @@ class Forest:
         Returns:
             The output values. Shape is (pop_size, output_len).
         """
-        x = check_tensor(x)
-
-        assert x.shape == (
-            self.pop_size,
-            self.input_len,
-        ), f"x shape should be ({self.pop_size}, {self.input_len}), but got {x.shape}"
+        if args_check:
+            x = self.forward_check(x)
 
         res = torch.ops.evogp_cuda.tree_evaluate(
             self.pop_size,  # popsize
@@ -211,7 +257,19 @@ class Forest:
 
         return res
 
-    def mutate(self, replace_pos: Tensor, new_sub_forest: "Forest") -> "Forest":
+    def forward_check(self, x: Tensor):
+        x = check_tensor(x)
+
+        assert x.shape == (
+            self.pop_size,
+            self.input_len,
+        ), f"x shape should be ({self.pop_size}, {self.input_len}), but got {x.shape}"
+
+        return x
+
+    def mutate(
+        self, replace_pos: Tensor, new_sub_forest: "Forest", args_check=True
+    ) -> "Forest":
         """
         Mutate the current forest by replacing subtrees at specified positions
         with new subtrees from a new_sub_forest.
@@ -223,24 +281,8 @@ class Forest:
         Returns:
             A new mutated Forest object.
         """
-        replace_pos = check_tensor(replace_pos)
-
-        # Validate shapes and dimensions
-        assert replace_pos.shape == (
-            self.pop_size,
-        ), f"replace_pos shape should be ({self.pop_size}, ), but got {replace_pos.shape}"
-        assert (
-            self.pop_size == new_sub_forest.pop_size
-        ), f"pop_size should be {self.pop_size}, but got {new_sub_forest.pop_size}"
-        assert (
-            self.input_len == new_sub_forest.input_len
-        ), f"input_len should be {self.input_len}, but got {new_sub_forest.input_len}"
-        assert (
-            self.output_len == new_sub_forest.output_len
-        ), f"output_len should be {self.output_len}, but got {new_sub_forest.output_len}"
-        assert (
-            self.gp_len == new_sub_forest.gp_len
-        ), f"gp_len should be {self.gp_len}, but got {new_sub_forest.gp_len}"
+        if args_check:
+            replace_pos = self.mutation_check(replace_pos, new_sub_forest)
 
         # Perform mutation operation using CUDA
         (
@@ -268,12 +310,35 @@ class Forest:
             batch_subtree_size,
         )
 
+    def mutation_check(self, replace_pos: Tensor, new_sub_forest: "Forest"):
+        replace_pos = check_tensor(replace_pos)
+
+        # Validate shapes and dimensions
+        assert replace_pos.shape == (
+            self.pop_size,
+        ), f"replace_pos shape should be ({self.pop_size}, ), but got {replace_pos.shape}"
+        assert (
+            self.pop_size == new_sub_forest.pop_size
+        ), f"pop_size should be {self.pop_size}, but got {new_sub_forest.pop_size}"
+        assert (
+            self.input_len == new_sub_forest.input_len
+        ), f"input_len should be {self.input_len}, but got {new_sub_forest.input_len}"
+        assert (
+            self.output_len == new_sub_forest.output_len
+        ), f"output_len should be {self.output_len}, but got {new_sub_forest.output_len}"
+        assert (
+            self.gp_len == new_sub_forest.gp_len
+        ), f"gp_len should be {self.gp_len}, but got {new_sub_forest.gp_len}"
+
+        return replace_pos
+
     def crossover(
         self,
         left_indices: Tensor,
         right_indices: Tensor,
         left_pos: Tensor,
         right_pos: Tensor,
+        args_check=True,
     ) -> "Forest":
         """
         Perform crossover operation.
@@ -287,25 +352,12 @@ class Forest:
         Returns:
             Forest: a new Forest object with the crossovered trees
         """
-        left_indices = check_tensor(left_indices)
-        right_indices = check_tensor(right_indices)
-        left_pos = check_tensor(left_pos)
-        right_pos = check_tensor(right_pos)
+        if args_check:
+            left_indices, right_indices, left_pos, right_pos = self.crossover_check(
+                left_indices, right_indices, left_pos, right_pos
+            )
 
         res_forest_size = left_indices.shape[0]
-
-        assert left_indices.shape == (
-            res_forest_size,
-        ), f"left_indices shape should be ({res_forest_size}, ), but got {left_indices.shape}"
-        assert right_indices.shape == (
-            res_forest_size,
-        ), f"right_indices shape should be ({res_forest_size}, ), but got {right_indices.shape}"
-        assert left_pos.shape == (
-            res_forest_size,
-        ), f"left_pos shape should be ({res_forest_size}, ), but got {left_pos.shape}"
-        assert right_pos.shape == (
-            res_forest_size,
-        ), f"right_pos shape should be ({res_forest_size}, ), but got {right_pos.shape}"
 
         (
             batch_node_value,
@@ -332,12 +384,37 @@ class Forest:
             batch_subtree_size,
         )
 
+    def crossover_check(self, left_indices, right_indices, left_pos, right_pos):
+        left_indices = check_tensor(left_indices)
+        right_indices = check_tensor(right_indices)
+        left_pos = check_tensor(left_pos)
+        right_pos = check_tensor(right_pos)
+
+        res_forest_size = left_indices.shape[0]
+
+        assert left_indices.shape == (
+            res_forest_size,
+        ), f"left_indices shape should be ({res_forest_size}, ), but got {left_indices.shape}"
+        assert right_indices.shape == (
+            res_forest_size,
+        ), f"right_indices shape should be ({res_forest_size}, ), but got {right_indices.shape}"
+        assert left_pos.shape == (
+            res_forest_size,
+        ), f"left_pos shape should be ({res_forest_size}, ), but got {left_pos.shape}"
+        assert right_pos.shape == (
+            res_forest_size,
+        ), f"right_pos shape should be ({res_forest_size}, ), but got {right_pos.shape}"
+
+        return left_indices, right_indices, left_pos, right_pos
+
     def SR_fitness(
         self,
         inputs: Tensor,
         labels: Tensor,
         use_MSE: bool = True,
         execute_mode: str = "normal",
+        execute_code: int = 0,
+        args_check: bool = True,
     ) -> Tensor:
         """
         Calculate the fitness of the current population using the SR metric.
@@ -350,6 +427,37 @@ class Forest:
         Returns:
             Tensor: a tensor of shape (pop_size,) containing the fitness values
         """
+        if args_check:
+            inputs, labels, execute_code = self.SR_fitness_check(
+                inputs, labels, use_MSE, execute_mode
+            )
+
+        batch_size = inputs.shape[0]
+        # Perform SR fitness computation using CUDA
+        res = torch.ops.evogp_cuda.tree_SR_fitness(
+            self.pop_size,
+            batch_size,
+            self.gp_len,
+            self.input_len,
+            self.output_len,
+            use_MSE,
+            self.batch_node_value,
+            self.batch_node_type,
+            self.batch_subtree_size,
+            inputs,
+            labels,
+            execute_code,
+        )
+
+        return res
+
+    def SR_fitness_check(
+        self,
+        inputs: Tensor,
+        labels: Tensor,
+        use_MSE: bool = True,
+        execute_mode: str = "normal",
+    ):
         inputs = check_tensor(inputs)
         labels = check_tensor(labels)
 
@@ -379,23 +487,7 @@ class Forest:
         elif execute_mode == "advanced":
             execute_code = 3
 
-        # Perform SR fitness computation using CUDA
-        res = torch.ops.evogp_cuda.tree_SR_fitness(
-            self.pop_size,
-            batch_size,
-            self.gp_len,
-            self.input_len,
-            self.output_len,
-            use_MSE,
-            self.batch_node_value,
-            self.batch_node_type,
-            self.batch_subtree_size,
-            inputs,
-            labels,
-            execute_code,
-        )
-
-        return res
+        return inputs, labels, execute_code
 
     @classmethod
     def set_debug_mode(cls, debug_mode: bool = True):
@@ -467,7 +559,7 @@ class Forest:
     def __using_timmer_mode(self):
         def timmer_wrapper(func):
             def wrapper(*args, **kwargs):
-                # save args that is string or bool 
+                # save args that is string or bool
                 saved_args = []
                 saved_kwargs = {}
                 for arg in args:
