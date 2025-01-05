@@ -550,7 +550,8 @@ class Forest:
                 return res
 
             return wrapper
-
+        if type(self).random_generate.__name__ == "random_generate":
+            type(self).random_generate = debug_wrapper(type(self).random_generate)
         self.forward = debug_wrapper(self.forward)
         self.crossover = debug_wrapper(self.crossover)
         self.mutate = debug_wrapper(self.mutate)
@@ -563,11 +564,11 @@ class Forest:
                 saved_args = []
                 saved_kwargs = {}
                 for arg in args:
-                    if isinstance(arg, bool) or isinstance(arg, str):
+                    if isinstance(arg, bool) or isinstance(arg, str) or isinstance(arg, int):
                         saved_args.append(arg)
 
                 for key, value in kwargs.items():
-                    if isinstance(value, bool) or isinstance(value, str):
+                    if isinstance(value, bool) or isinstance(value, str) or isinstance(value, int):
                         saved_kwargs[key] = value
 
                 tic = time.time()
@@ -585,6 +586,8 @@ class Forest:
 
             return wrapper
 
+        if type(self).random_generate.__name__ == "random_generate":  # not been wrapped
+            type(self).random_generate = timmer_wrapper(type(self).random_generate)
         self.forward = timmer_wrapper(self.forward)
         self.crossover = timmer_wrapper(self.crossover)
         self.mutate = timmer_wrapper(self.mutate)

@@ -81,7 +81,7 @@ std::tuple<torch::Tensor, torch::Tensor, torch::Tensor> tree_generate(
         node_type_tensor.data_ptr<int16_t>(), 
         subtree_size_tensor.data_ptr<int16_t>()
     );
-    check_cuda_error("generate");
+    // check_cuda_error("generate");
 
     // return multiple tensors
     return std::make_tuple(value_tensor, node_type_tensor, subtree_size_tensor);
@@ -132,7 +132,7 @@ std::tuple<torch::Tensor, torch::Tensor, torch::Tensor> tree_mutate(
         node_type_res.data_ptr<int16_t>(),
         subtree_size_res.data_ptr<int16_t>()
     );
-    check_cuda_error("mutate");
+    // check_cuda_error("mutate");
     // return multiple tensors
     return std::make_tuple(value_res, node_type_res, subtree_size_res);
 }
@@ -185,7 +185,7 @@ std::tuple<torch::Tensor, torch::Tensor, torch::Tensor> tree_crossover(
         node_type_res.data_ptr<int16_t>(),
         subtree_size_res.data_ptr<int16_t>()
     );
-    check_cuda_error("crossover");
+    // check_cuda_error("crossover");
     // return multiple tensors
     return std::make_tuple(value_res, node_type_res, subtree_size_res);
 }
@@ -228,7 +228,7 @@ torch::Tensor tree_evaluate(
         variables.data_ptr<float>(),
         results.data_ptr<float>()
     );
-    check_cuda_error("evaluate");
+    // check_cuda_error("evaluate");
     return results;
 }
 
@@ -279,7 +279,7 @@ torch::Tensor tree_SR_fitness(
         fitness.data_ptr<float>(),
         kernel_type
     );
-    check_cuda_error("SR_fitness");
+    // check_cuda_error("SR_fitness");
     return fitness;
 }
 
