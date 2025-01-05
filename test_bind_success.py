@@ -136,6 +136,7 @@ def SR_fitnesses(
         subtree_size,
         variables,
         labels,
+        0
     )
 
 

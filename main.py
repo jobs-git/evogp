@@ -11,6 +11,7 @@ from evogp.algorithm import (
     DefaultMutation,
     DefaultCrossover,
 )
+from evogp.problem import SymbolicRegression
 
 XOR_INPUTS = torch.tensor(
     [
@@ -35,24 +36,27 @@ XOR_OUTPUTS = torch.tensor(
     device="cuda",
 )
 
+problem = SymbolicRegression(datapoints=XOR_INPUTS, labels=XOR_OUTPUTS)
 
-def evaluate(forest: Forest):
-    loss = forest.SR_fitness(XOR_INPUTS, XOR_OUTPUTS)
-    return -loss
-
-
-generate_configs = {
-    "const_prob": 0.5,
-    "out_prob": 0.5,
-    "func_prob": {"+": 0.25, "-": 0.25, "*": 0.25, "/": 0.25},
-    "layer_leaf_prob": 0.2,
-    "const_range": (-1, 1),
-    "sample_cnt": 8,
-}
 
 algorithm = GeneticProgramming(
     crossover=DefaultCrossover(),
-    mutation=DefaultMutation(mutation_rate=0.2, max_layer_cnt=3, **generate_configs),
+    mutation=DefaultMutation(
+        mutation_rate=0.2,
+        generate_configs=Forest.random_generate_check(
+            pop_size=1,
+            gp_len=1024,
+            input_len=2,
+            output_len=1,
+            const_prob=0.5,
+            out_prob=0.5,
+            func_prob={"+": 0.25, "-": 0.25, "*": 0.25, "/": 0.25},
+            layer_leaf_prob=0.2,
+            const_range=(-1, 1),
+            sample_cnt=100,
+            max_layer_cnt=3,
+        ),
+    ),
     selection=DefaultSelection(survival_rate=0.3, elite_rate=0.01),
 )
 
@@ -62,17 +66,22 @@ forest = Forest.random_generate(
     gp_len=512,
     input_len=3,
     output_len=1,
+    const_prob=0.5,
+    out_prob=0.5,
+    func_prob={"+": 0.25, "-": 0.25, "*": 0.25, "/": 0.25},
+    layer_leaf_prob=0.2,
+    const_range=(-1, 1),
+    sample_cnt=100,
     max_layer_cnt=5,
-    **generate_configs,
 )
 
 algorithm.initialize(forest)
-fitness = evaluate(forest)
+fitness = problem.evaluate(forest)
 
-for i in range(1000):
+for i in range(50):
     tic = time.time()
     forest = algorithm.step(fitness)
-    fitness = evaluate(forest)
+    fitness = problem.evaluate(forest)
     toc = time.time()
     print(
         f"step: {i}, max_fitness: {fitness.max()}, mean_fitness: {fitness.mean()}, time: {toc - tic}"
