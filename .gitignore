@@ -50,3 +50,4 @@ test*.pyc
 
 # Ignore npy file
 *.npy
+experiment/data/records.json
