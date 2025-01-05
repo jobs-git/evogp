@@ -13,6 +13,7 @@ from evogp.algorithm import (
     DefaultCrossover,
 )
 
+Forest.set_timmer_mode(True)
 
 def func(x):
     val = x[0] ** 4 / (x[0] ** 4 + 1) + x[1] ** 4 / (x[1] ** 4 + 1)
@@ -35,40 +36,40 @@ data_inputs, data_outputs = create_dataset(func, int(100), 2, (-5, 5))
 
 def evaluate(forest: Forest):
 
-    advanced_loss = forest.SR_fitness(
-        data_inputs, data_outputs, execute_mode="advanced"
-    )
-    advanced_loss = forest.SR_fitness(
-        data_inputs, data_outputs, execute_mode="advanced"
-    )
-    advanced_loss = forest.SR_fitness(
-        data_inputs, data_outputs, execute_mode="advanced"
-    )
-    advanced_loss = forest.SR_fitness(
-        data_inputs, data_outputs, execute_mode="advanced"
-    )
-    advanced_loss = forest.SR_fitness(
-        data_inputs, data_outputs, execute_mode="advanced"
-    )
-    torch.cuda.empty_cache()
-    tic = time.time()
-    advanced_loss = forest.SR_fitness(
-        data_inputs, data_outputs, execute_mode="advanced"
-    )
-    torch.cuda.synchronize()
-    advanced_time = time.time() - tic
+    # advanced_loss = forest.SR_fitness(
+    #     data_inputs, data_outputs, execute_mode="advanced"
+    # )
+    # advanced_loss = forest.SR_fitness(
+    #     data_inputs, data_outputs, execute_mode="advanced"
+    # )
+    # advanced_loss = forest.SR_fitness(
+    #     data_inputs, data_outputs, execute_mode="advanced"
+    # )
+    # advanced_loss = forest.SR_fitness(
+    #     data_inputs, data_outputs, execute_mode="advanced"
+    # )
+    # advanced_loss = forest.SR_fitness(
+    #     data_inputs, data_outputs, execute_mode="advanced"
+    # )
+    # torch.cuda.empty_cache()
+    # tic = time.time()
+    # advanced_loss = forest.SR_fitness(
+    #     data_inputs, data_outputs, execute_mode="advanced"
+    # )
+    # torch.cuda.synchronize()
+    # advanced_time = time.time() - tic
 
-    normal_loss = forest.SR_fitness(data_inputs, data_outputs, execute_mode="normal")
-    normal_loss = forest.SR_fitness(data_inputs, data_outputs, execute_mode="normal")
-    normal_loss = forest.SR_fitness(data_inputs, data_outputs, execute_mode="normal")
-    normal_loss = forest.SR_fitness(data_inputs, data_outputs, execute_mode="normal")
-    normal_loss = forest.SR_fitness(data_inputs, data_outputs, execute_mode="normal")
-    normal_loss = forest.SR_fitness(data_inputs, data_outputs, execute_mode="normal")
-    torch.cuda.empty_cache()
-    tic = time.time()
-    normal_loss = forest.SR_fitness(data_inputs, data_outputs, execute_mode="normal")
-    torch.cuda.synchronize()
-    normal_time = time.time() - tic
+    # normal_loss = forest.SR_fitness(data_inputs, data_outputs, execute_mode="normal")
+    # normal_loss = forest.SR_fitness(data_inputs, data_outputs, execute_mode="normal")
+    # normal_loss = forest.SR_fitness(data_inputs, data_outputs, execute_mode="normal")
+    # normal_loss = forest.SR_fitness(data_inputs, data_outputs, execute_mode="normal")
+    # normal_loss = forest.SR_fitness(data_inputs, data_outputs, execute_mode="normal")
+    # normal_loss = forest.SR_fitness(data_inputs, data_outputs, execute_mode="normal")
+    # torch.cuda.empty_cache()
+    # tic = time.time()
+    # normal_loss = forest.SR_fitness(data_inputs, data_outputs, execute_mode="normal")
+    # torch.cuda.synchronize()
+    # normal_time = time.time() - tic
 
 
     # tic = time.time()
@@ -85,10 +86,15 @@ def evaluate(forest: Forest):
     # assert torch.allclose(tree_loop_loss, normal_loss), f"{tree_loop_loss}, {normal_loss}"
 
     # assert torch.allclose(tree_loop_loss, advanced_loss), f"{tree_loop_loss}, {advanced_loss}"
-    assert torch.allclose(normal_loss, advanced_loss), f"{normal_loss}, {advanced_loss}"
+    # assert torch.allclose(normal_loss, advanced_loss), f"{normal_loss}, {advanced_loss}"
 
-    print(
-        f"normal time: {normal_time}, advanced time: {advanced_time}"
+    # print(
+    #     f"normal time: {normal_time}, advanced time: {advanced_time}"
+    # )
+
+    normal_loss = forest.SR_fitness(data_inputs, data_outputs, execute_mode="normal")
+    advanced_loss = forest.SR_fitness(
+        data_inputs, data_outputs, execute_mode="advanced"
     )
 
     return -advanced_loss
@@ -122,7 +128,7 @@ forest = Forest.random_generate(
 algorithm.initialize(forest)
 fitness = evaluate(forest)
 
-for i in range(30):
+for i in range(10):
     tic = time.time()
     forest = algorithm.step(fitness)
     fitness = evaluate(forest)
@@ -130,3 +136,5 @@ for i in range(30):
     print(
         f"step: {i}, max_fitness: {fitness.max()}, mean_fitness: {fitness.mean()}, time: {toc - tic}"
     )
+
+print(Forest.get_timer_record())

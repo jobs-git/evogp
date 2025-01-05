@@ -1,5 +1,5 @@
 from typing import Optional, Tuple
-
+import time
 import torch
 from torch import Tensor
 import numpy as np
@@ -9,8 +9,9 @@ from . import Tree
 
 class Forest:
 
-    debug_mode = False
-    timmer_mode = False
+    __debug_mode = False
+    __timmer_mode = False
+    __shared_time_record = []
 
     def __init__(
         self,
@@ -41,8 +42,11 @@ class Forest:
         self.batch_node_type = batch_node_type
         self.batch_subtree_size = batch_subtree_size
 
-        if self.debug_mode:
-            self.using_debug_mode()
+        if self.__debug_mode:
+            self.__using_debug_mode()
+
+        if self.__timmer_mode:
+            self.__using_timmer_mode()
 
     @staticmethod
     def random_generate(
@@ -329,7 +333,11 @@ class Forest:
         )
 
     def SR_fitness(
-        self, inputs: Tensor, labels: Tensor, use_MSE: bool = True, execute_mode: str = "normal"
+        self,
+        inputs: Tensor,
+        labels: Tensor,
+        use_MSE: bool = True,
+        execute_mode: str = "normal",
     ) -> Tensor:
         """
         Calculate the fitness of the current population using the SR metric.
@@ -356,7 +364,12 @@ class Forest:
             self.output_len,
         ), f"outputs shape should be ({batch_size}, {self.output_len}), but got {labels.shape}"
 
-        assert execute_mode in ["normal", "tree_loop", "data_loop", "advanced"], f"execute_mode should be 'normal', 'tree_loop' or 'data_loop', but got {execute_mode}"
+        assert execute_mode in [
+            "normal",
+            "tree_loop",
+            "data_loop",
+            "advanced",
+        ], f"execute_mode should be 'normal', 'tree_loop' or 'data_loop', but got {execute_mode}"
         if execute_mode == "normal":
             execute_code = 0
         elif execute_mode == "tree_loop":
@@ -379,7 +392,7 @@ class Forest:
             self.batch_subtree_size,
             inputs,
             labels,
-            execute_code
+            execute_code,
         )
 
         return res
@@ -392,9 +405,19 @@ class Forest:
         else:
             print("Debug mode on Forest is disabled.")
 
-        cls.debug_mode = debug_mode
+        cls.__debug_mode = debug_mode
 
-    def using_debug_mode(self):
+    @classmethod
+    def set_timmer_mode(cls, timmer_mode: bool = True):
+        assert isinstance(timmer_mode, bool)
+        if timmer_mode:
+            print("Timmer mode on Forest is enabled.")
+        else:
+            print("Timmer mode on Forest is disabled.")
+
+        cls.__timmer_mode = timmer_mode
+
+    def __using_debug_mode(self):
         def debug_wrapper(func):
             def wrapper(*args, **kwargs):
 
@@ -440,6 +463,48 @@ class Forest:
         self.crossover = debug_wrapper(self.crossover)
         self.mutate = debug_wrapper(self.mutate)
         self.SR_fitness = debug_wrapper(self.SR_fitness)
+
+    def __using_timmer_mode(self):
+        def timmer_wrapper(func):
+            def wrapper(*args, **kwargs):
+                # save args that is string or bool 
+                saved_args = []
+                saved_kwargs = {}
+                for arg in args:
+                    if isinstance(arg, bool) or isinstance(arg, str):
+                        saved_args.append(arg)
+
+                for key, value in kwargs.items():
+                    if isinstance(value, bool) or isinstance(value, str):
+                        saved_kwargs[key] = value
+
+                tic = time.time()
+                res = func(*args, **kwargs)
+                torch.cuda.synchronize()
+                cost_time = time.time() - tic
+                info = {
+                    "func_name": func.__name__,
+                    "cost_time": cost_time,
+                    "args": saved_args,
+                    "kwargs": saved_kwargs,
+                }
+                self.__shared_time_record.append(info)
+                return res
+
+            return wrapper
+
+        self.forward = timmer_wrapper(self.forward)
+        self.crossover = timmer_wrapper(self.crossover)
+        self.mutate = timmer_wrapper(self.mutate)
+        self.SR_fitness = timmer_wrapper(self.SR_fitness)
+
+    @classmethod
+    def clear_timer_record(cls):
+        cls.__shared_time_record = []
+
+    @classmethod
+    def get_timer_record(cls):
+        return cls.__shared_time_record
 
     def __getitem__(self, index):
         if isinstance(index, int):
