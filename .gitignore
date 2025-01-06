@@ -42,12 +42,6 @@ dist/
 .DS_Store
 Thumbs.db
 
-# Ignore generated trees
-tree_structure.txt
-
 # Ignore any local test data
-test*.pyc
-
-# Ignore npy file
-*.npy
-experiment/data/records.json
+test/
+output/

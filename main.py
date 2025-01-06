@@ -57,12 +57,12 @@ algorithm = GeneticProgramming(
             max_layer_cnt=3,
         ),
     ),
-    selection=DefaultSelection(survival_rate=0.3, elite_rate=0.01),
+    selection=DefaultSelection(survival_rate=0.3, elite_rate=0),
 )
 
 # initialize the forest
 forest = Forest.random_generate(
-    pop_size=1000000,
+    pop_size=100,
     gp_len=512,
     input_len=3,
     output_len=1,
