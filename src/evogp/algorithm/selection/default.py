@@ -35,4 +35,4 @@ class DefaultSelection(BaseSelection):
         survice_indices = sorted_indices[:survive_cnt]
         elite_indices = sorted_indices[:elite_cnt]
 
-        return forest[elite_indices], forest[survice_indices]
+        return elite_indices, survice_indices

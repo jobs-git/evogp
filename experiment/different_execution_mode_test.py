@@ -1,7 +1,8 @@
 import json
 import time
-
+import os
 import torch
+import gc
 
 torch.random.manual_seed(0)
 torch.cuda.manual_seed(0)
@@ -15,8 +16,11 @@ from evogp.algorithm import (
 )
 from evogp.problem import SymbolicRegression
 
-OUTPUT_FILE = "./experiment/data/records.json"
-REPEAT_TIMES = 3
+OUTPUT_FILE = os.path.join(
+    "./experiment/data", os.path.splitext(os.path.basename(__file__))[0] + ".json"
+)
+REPEAT_TIMES = 10
+
 
 def func(x):
     val = x[0] ** 4 / (x[0] ** 4 + 1) + x[1] ** 4 / (x[1] ** 4 + 1)
@@ -70,12 +74,13 @@ def run_once(popsize, data_size, execution_code=0):
 
     algorithm.initialize(forest)
     fitness = problem.evaluate(forest)
+    torch.cuda.synchronize()
     total_sr_time = 0
     total_time_tic = time.time()
     for i in range(50):
         print(i)
         forest = algorithm.step(fitness, args_check=False)
-
+        torch.cuda.synchronize()
         SR_tic = time.time()
         fitness = problem.evaluate(
             forest, execute_code=execution_code, args_check=False
@@ -98,12 +103,19 @@ def run_once(popsize, data_size, execution_code=0):
 
 
 def main():
+
+    if not os.path.exists(OUTPUT_FILE):
+        with open(OUTPUT_FILE, "w") as f:
+            json.dump([], f)
+
     # create file
-    for p in [10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000, 100000, 200000, 500000, 1000000]:
-        for d in [10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000, 100000, 200000, 500000, 1000000]:
+    for p in [ 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000, 100000, 200000, 500000, 1000000,]:
+        for d in [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384]:
             for _ in range(REPEAT_TIMES):
+                gc.collect()
+                torch.cuda.empty_cache()
                 run_once(p, d, execution_code=3)  # advanced
 
-
 if __name__ == "__main__":
+    print(OUTPUT_FILE)
     main()

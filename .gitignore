@@ -45,3 +45,8 @@ Thumbs.db
 # Ignore any local test data
 test/
 output/
+test*.pyc
+
+# Ignore npy file
+*.npy
+experiment/data/*

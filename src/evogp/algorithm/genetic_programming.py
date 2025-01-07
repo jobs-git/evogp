@@ -28,9 +28,15 @@ class GeneticProgramming:
             self.forest.pop_size,
         ), "fitness shape should be ({self.forest.pop_size}, ), but got {fitness.shape}"
 
-        elite_forest, next_forest = self.selection(self.forest, fitness)
-        next_forest = self.crossover(next_forest, self.pop_size - len(elite_forest), args_check=args_check)
+        elite_indices, next_indices = self.selection(self.forest, fitness)
+        next_forest = self.crossover(
+            forest=self.forest,
+            survivor_indices=next_indices,
+            target_cnt=self.pop_size - elite_indices.shape[0],
+            fitness=fitness,
+            args_check=args_check,
+        )
         next_forest = self.mutation(next_forest, args_check=args_check)
-        self.forest = elite_forest + next_forest
-        
+        self.forest = self.forest[elite_indices] + next_forest
+
         return self.forest
