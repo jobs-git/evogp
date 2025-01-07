@@ -17,7 +17,7 @@ class DefaultCrossover(BaseCrossover):
             low=0, high=forest_size, size=(2, target_cnt), dtype=torch.int32, device="cuda", requires_grad=False
         )
 
-        # chhoose left and right positions
+        # choose left and right positions
         tree_sizes = forest.batch_subtree_size[:, 0]
         left_pos_unlimited, right_pos_unlimited = torch.randint(
             low=0, high=MAX_STACK, size=(2, target_cnt), dtype=torch.int32, device="cuda", requires_grad=False
