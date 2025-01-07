@@ -1,0 +1,50 @@
+from typing import Optional
+import torch
+
+from ...tree import Forest
+from .base import BaseSelection
+
+
+class TruncationSelection(BaseSelection):
+
+    def __init__(
+        self,
+        survivor_rate: float = 0.5,
+        elite_rate: float = 0,
+        survivor_cnt: Optional[int] = None,
+        elite_cnt: Optional[int] = None,
+    ):
+        super().__init__()
+        assert 0 <= survivor_rate <= 1, "survival_rate should be in [0, 1]"
+        assert 0 <= elite_rate <= 1, "elite_rate should be in [0, 1]"
+        self.survivor_rate = survivor_rate
+        self.survivor_cnt = survivor_cnt
+        self.elite_rate = elite_rate
+        self.elite_cnt = elite_cnt
+
+    def __call__(self, forest: Forest, fitness: torch.Tensor):
+        # preprocess
+        if self.survivor_cnt is not None:
+            survivor_cnt = self.survivor_cnt
+        else:
+            survivor_cnt = int(forest.pop_size * self.survivor_rate)
+
+        if self.elite_cnt is not None:
+            elite_cnt = self.elite_cnt
+        else:
+            elite_cnt = int(forest.pop_size * self.elite_rate)
+
+        # survivor selection
+        sorted_fitness, sorted_indices = torch.sort(fitness, descending=True)
+        num_selectable = int(forest.pop_size * self.survivor_rate)
+        random_indices = torch.multinomial(
+            (sorted_indices < num_selectable).to("cuda", torch.float),
+            survivor_cnt,
+            replacement=True,
+        ).to(torch.int32)
+        survivor_indices = sorted_indices[random_indices]
+
+        # elite selection
+        elite_indices = sorted_indices[:elite_cnt]
+
+        return forest[elite_indices], forest[survivor_indices]

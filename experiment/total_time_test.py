@@ -43,7 +43,7 @@ def run_once(popsize, data_size):
                 max_layer_cnt=3,
             ),
         ),
-        selection=DefaultSelection(survival_rate=0.3, elite_rate=0.01),
+        selection=DefaultSelection(survivor_rate=0.3, elite_rate=0.01),
     )
     forest = Forest.random_generate(
         pop_size=popsize,

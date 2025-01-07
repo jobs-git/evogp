@@ -8,6 +8,10 @@ from evogp.tree import Tree, Forest, MAX_STACK
 from evogp.algorithm import (
     GeneticProgramming,
     DefaultSelection,
+    TournamentSelection,
+    TruncationSelection,
+    RouletteSelection,
+    RankSelection,
     DefaultMutation,
     DefaultCrossover,
 )
@@ -57,7 +61,7 @@ algorithm = GeneticProgramming(
             max_layer_cnt=3,
         ),
     ),
-    selection=DefaultSelection(survival_rate=0.3, elite_rate=0),
+    selection=RouletteSelection(),
 )
 
 # initialize the forest
