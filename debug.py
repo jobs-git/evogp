@@ -20,7 +20,7 @@ def func(x):
     val = x[0] ** 4 / (x[0] ** 4 + 1) + x[1] ** 4 / (x[1] ** 4 + 1)
     return val.reshape(-1)
 
-problem = SymbolicRegression(func=func, num_inputs=2, num_data=10000, lower_bounds=-5, upper_bounds=5)
+problem = SymbolicRegression(func=func, num_inputs=2, num_data=128, lower_bounds=-5, upper_bounds=5)
 
 generate_configs = Forest.random_generate_check(
     pop_size=1,
@@ -44,8 +44,8 @@ algorithm = GeneticProgramming(
 
 # initialize the forest
 forest = Forest.random_generate(
-    pop_size=int(10000),
-    gp_len=128,
+    pop_size=int(1000000),
+    gp_len=400,
     input_len=2,
     output_len=1,
     **generate_configs,
@@ -54,7 +54,7 @@ forest = Forest.random_generate(
 algorithm.initialize(forest)
 fitness0 = problem.evaluate(forest)
 
-for i in range(150):
+for i in range(50):
     torch.cuda.synchronize()
     total_tic = time.time()
 
@@ -62,19 +62,19 @@ for i in range(150):
 
     torch.cuda.synchronize()
     advance_tic = time.time()
-    fitness3 = problem.evaluate(forest, execute_code=3, args_check=False)
+    fitness0 = problem.evaluate(forest, execute_code=1, args_check=False)
     torch.cuda.synchronize()
     advance_time = time.time() - advance_tic
 
-    torch.cuda.synchronize()
-    normal_tic = time.time()
-    fitness0 = problem.evaluate(forest, execute_code=0, args_check=False)
-    torch.cuda.synchronize()
-    normal_time = time.time() - normal_tic
+    # torch.cuda.synchronize()
+    # normal_tic = time.time()
+    # fitness0 = problem.evaluate(forest, execute_code=0, args_check=False)
+    # torch.cuda.synchronize()
+    # normal_time = time.time() - normal_tic
 
     total_time = time.time() - total_tic
     print(
-        f"step: {i}, max_fitness_normal: {fitness0.max()}, mean_fitness: {fitness0.mean()}, time: {normal_time}"
+        f"step: {i}, max_fitness_normal: {fitness0.max()}, mean_fitness: {fitness0.mean()}, time: {advance_time}"
     )
-    print(f"step: {i}, max_fitness_advance: {fitness3.max()}, mean_fitness: {fitness3.mean()}, time: {advance_time}")
+    # print(f"step: {i}, max_fitness_advance: {fitness3.max()}, mean_fitness: {fitness3.mean()}, time: {advance_time}")
     print(total_time)

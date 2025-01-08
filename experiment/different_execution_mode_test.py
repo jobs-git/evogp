@@ -27,6 +27,9 @@ def func(x):
     return val.reshape(-1)
 
 
+output_data = []
+
+
 def run_once(popsize, data_size, execution_code=0):
     problem = SymbolicRegression(
         func=func, num_inputs=2, num_data=data_size, lower_bounds=-5, upper_bounds=5
@@ -38,31 +41,51 @@ def run_once(popsize, data_size, execution_code=0):
             mutation_rate=0.2,
             generate_configs=Forest.random_generate_check(
                 pop_size=1,
-                gp_len=MAX_STACK,
+                gp_len=400,
                 input_len=2,
                 output_len=1,
                 const_prob=0.5,
-                out_prob=0.5,
-                func_prob={"+": 0.25, "-": 0.25, "*": 0.25, "/": 0.25},
-                layer_leaf_prob=0.2,
-                const_range=(-1, 1),
-                sample_cnt=100,
-                max_layer_cnt=3,
+                out_prob=0,
+                func_prob={
+                    "+": 3,
+                    "-": 3,
+                    "*": 3,
+                    "/": 3,
+                    "sin": 1,
+                    "cos": 1,
+                    "tan": 1,
+                },
+                const_samples=torch.tensor(
+                    [-5.0, -4.0, -3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0, 4.0, 5.0],
+                    device="cuda",
+                ),
+                layer_leaf_prob=0.3,
+                max_layer_cnt=4,
             ),
         ),
         selection=DefaultSelection(survival_rate=0.3, elite_rate=0.01),
     )
     forest = Forest.random_generate(
         pop_size=popsize,
-        gp_len=MAX_STACK,
+        gp_len=400,
         input_len=2,
         output_len=1,
         const_prob=0.5,
-        out_prob=0.5,
-        func_prob={"+": 0.25, "-": 0.25, "*": 0.25, "/": 0.25},
-        layer_leaf_prob=0.2,
-        const_range=(-1, 1),
-        sample_cnt=100,
+        out_prob=0.0,
+        func_prob={
+            "+": 3,
+            "-": 3,
+            "*": 3,
+            "/": 3,
+            "sin": 1,
+            "cos": 1,
+            "tan": 1,
+        },
+        layer_leaf_prob=0.3,
+        const_samples=torch.tensor(
+            [-5.0, -4.0, -3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0, 4.0, 5.0],
+            device="cuda",
+        ),
         max_layer_cnt=5,
     )
 
@@ -93,13 +116,11 @@ def run_once(popsize, data_size, execution_code=0):
     info["total_time"] = time.time() - total_time_tic
 
     # write file
-    with open(OUTPUT_FILE, "r") as f:
-        previous_records = json.load(f)
 
-    previous_records.append(info)
+    output_data.append(info)
 
     with open(OUTPUT_FILE, "w") as f:
-        json.dump(previous_records, f, indent=4)
+        json.dump(output_data, f, indent=4)
 
 
 def main():
@@ -109,13 +130,30 @@ def main():
             json.dump([], f)
 
     # create file
-    for p in [ 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000, 100000, 200000, 500000, 1000000,]:
+    for p in [
+        10,
+        20,
+        50,
+        100,
+        200,
+        500,
+        1000,
+        2000,
+        5000,
+        10000,
+        20000,
+        50000,
+        100000,
+        200000,
+        500000,
+        1000000,
+    ]:
         for d in [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384]:
             for _ in range(REPEAT_TIMES):
                 gc.collect()
                 torch.cuda.empty_cache()
                 run_once(p, d, execution_code=3)  # advanced
 
+
 if __name__ == "__main__":
-    print(OUTPUT_FILE)
     main()
