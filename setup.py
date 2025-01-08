@@ -18,7 +18,7 @@ setup(
             extra_compile_args={
                 "cxx": ["-O3"],
                 "nvcc": [
-                    "-O2",
+                    "-O3",
                     "--expt-relaxed-constexpr",
                     "--ptxas-options=-v",
                     "-lineinfo" "-lcudart",
