@@ -21,15 +21,15 @@ setup(
                     "-O3",
                     "--expt-relaxed-constexpr",
                     "--ptxas-options=-v",
-                    "-lineinfo" "-lcudart",
+                    "-Xptxas=-O3",
+                    "-lineinfo",
+                    "-lcudart",
+                    "-use_fast_math",
+                    "-maxrregcount=32",
                 ],
             },
         )
     ],
     cmdclass={"build_ext": BuildExtension.with_options(parallel=True)},
-    options={
-        "build_ext": {
-            "build_lib": "./src/evogp"
-        }
-    }
+    options={"build_ext": {"build_lib": "./src/evogp"}},
 )
