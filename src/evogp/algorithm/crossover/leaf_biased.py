@@ -1,20 +1,23 @@
 from typing import Optional
 import torch
+from torch import Tensor
 
 from ...tree import Forest, MAX_STACK, randint
 from ..selection import BaseSelector
 from .base import BaseCrossover
 
 
-class DiversityCrossover(BaseCrossover):
+class LeafBiasedCrossover(BaseCrossover):
 
     def __init__(
         self,
         crossover_rate: int = 0.9,
+        leaf_bias: float = 0.3,
         recipient_selector: Optional[BaseSelector] = None,
         donor_selector: Optional[BaseSelector] = None,
     ):
         self.crossover_rate = crossover_rate
+        self.leaf_bias = leaf_bias
         self.recipient_selector = recipient_selector
         self.donor_selector = donor_selector
 
@@ -55,19 +58,36 @@ class DiversityCrossover(BaseCrossover):
             donor_indices = survivor_indices[random_indices]
 
         # choose recipient and donor positions
+        def choose_leaf_pos(size_tensor: Tensor):
+            random = torch.rand(size_tensor.shape, device="cuda")
+            # mask out the exceeding parts of the individual
+            arange_tensor = torch.arange(size_tensor.shape[1], device="cuda")
+            mask = arange_tensor < size_tensor[:, 0].unsqueeze(1)
+            random = random * mask
+            # mask out the non-leaf nodes
+            random = torch.where(size_tensor == 1, random, 0)
+            return torch.argmax(random, 1).to(torch.int32)
+
         size_tensor = forest.batch_subtree_size
-        recipient_pos = randint(
+        recipient_leaf_pos = choose_leaf_pos(size_tensor[recipient_indices])
+        donor_leaf_pos = choose_leaf_pos(size_tensor[donor_indices])
+
+        recipient_normal_pos = randint(
             size=(crossover_cnt,),
             low=0,
             high=size_tensor[recipient_indices, 0],
             dtype=torch.int32,
         )
-        donor_pos = randint(
+        donor_normal_pos = randint(
             size=(crossover_cnt,),
             low=0,
             high=size_tensor[donor_indices, 0],
             dtype=torch.int32,
         )
+
+        leaf_pair = torch.rand(crossover_cnt, device="cuda") < self.leaf_bias
+        recipient_pos = torch.where(leaf_pair, recipient_leaf_pos, recipient_normal_pos)
+        donor_pos = torch.where(leaf_pair, donor_leaf_pos, donor_normal_pos)
 
         # crossover the trees
         crossovered_forest = forest.crossover(

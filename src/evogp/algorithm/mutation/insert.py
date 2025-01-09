@@ -3,10 +3,11 @@ import torch
 from torch import Tensor
 
 from .base import BaseMutation
-from ...tree import Forest, MAX_STACK
+from ...tree import Forest, MAX_STACK, randint
+from .mutation_utils import vmap_subtree
 
 
-class DefaultMutation(BaseMutation):
+class InsertMutation(BaseMutation):
 
     def __init__(
         self,
@@ -25,9 +26,17 @@ class DefaultMutation(BaseMutation):
 
         forest_to_mutate = forest[mutate_indices]
 
-        # mutate the trees
-        # generate sub trees
-        sub_forest = Forest.random_generate(
+        # extract subtrees
+        mutate_positions = randint(
+            size=(forest_to_mutate.pop_size,),
+            low=0,
+            high=forest_to_mutate.batch_subtree_size[:, 0],
+            dtype=torch.int64,
+        )
+        subtrees = vmap_subtree(forest_to_mutate, mutate_positions)
+
+        # generate newtrees
+        newtrees = Forest.random_generate(
             pop_size=forest_to_mutate.pop_size,
             gp_len=forest_to_mutate.gp_len,
             input_len=forest_to_mutate.input_len,
@@ -35,19 +44,19 @@ class DefaultMutation(BaseMutation):
             **self.generate_configs,
             args_check=args_check,
         )
-        # generate mutation positions
-        mutate_positions_unlimited = torch.randint(
-            low=0,
-            high=MAX_STACK,
-            size=(forest_to_mutate.pop_size,),
+        newtrees_positions = randint(
+            size=(newtrees.pop_size,),
+            low=1,
+            high=newtrees.batch_subtree_size[:, 0],
             dtype=torch.int32,
-            device="cuda",
-            requires_grad=False,
-        )
-        mutate_positions = (
-            mutate_positions_unlimited % forest_to_mutate.batch_subtree_size[:, 0]
         )
 
-        forest[mutate_indices] = forest_to_mutate.mutate(mutate_positions, sub_forest, args_check=args_check)
+        # insert the subtrees to newtrees
+        newtrees = newtrees.mutate(newtrees_positions, subtrees, args_check=args_check)
+
+        # insert the newtrees to forest
+        forest[mutate_indices] = forest_to_mutate.mutate(
+            mutate_positions.to(torch.int32), newtrees, args_check=args_check
+        )
 
         return forest

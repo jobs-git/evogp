@@ -57,4 +57,4 @@ class RankSelection(BaseSelection):
         # elite selection
         elite_indices = sorted_indices[:elite_cnt]
 
-        return forest[elite_indices], forest[survivor_indices]
+        return elite_indices, survivor_indices

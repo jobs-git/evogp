@@ -48,4 +48,4 @@ class RouletteSelection(BaseSelection):
             sorted_fitness, sorted_indices = torch.sort(fitness, descending=True)
             elite_indices = sorted_indices[:elite_cnt]
 
-        return forest[elite_indices], forest[survivor_indices]
+        return elite_indices, survivor_indices

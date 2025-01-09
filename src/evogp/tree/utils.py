@@ -194,3 +194,10 @@ def str_tree(value, node_type, subtree_size):
         res += " "
 
     return res
+
+
+def randint(size, low, high, dtype=torch.int64, device="cuda", requires_grad=False):
+    random = low + torch.rand(size, device=device, requires_grad=requires_grad) * (
+        high - low
+    )
+    return random.to(dtype=dtype)
