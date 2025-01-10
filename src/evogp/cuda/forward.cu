@@ -432,10 +432,10 @@ __global__ void treeGPRegressionFitnessKernel(
 	const unsigned int dataPointId = nTB * blockDim.x + threadId;
 
 	__shared__ float sharedFitness[SR_BLOCK_SIZE];
-	sharedFitness[threadId] = .0f;
 
-	if (nGP >= popSize || nTB >= block_cnt_per_tree || dataPointId >= dataPoints)
+	if (nGP >= popSize || nTB >= block_cnt_per_tree)
 		return;
+
 	if constexpr (multiOutput)
 	{
 		assert(outLen > 1);
@@ -448,23 +448,26 @@ __global__ void treeGPRegressionFitnessKernel(
 	}
 	// init
 
-	float fit = .0f;
-	float* stack = (float*)alloca(MAX_STACK * sizeof(float));
-	int16_t* infos = (int16_t*)alloca(2 * MAX_STACK * sizeof(int16_t));
-	
-	//current tree
-    auto i_value = value + nGP * maxGPLen; 
-    auto i_type = type + nGP * maxGPLen;
-    auto i_subtree_size = subtree_size + nGP * maxGPLen;
 
-	// evaluate over data points
-	auto i_vars = variables + dataPointId * varLen;
-	auto i_labels = labels + dataPointId * outLen;
-	float* s_outs{};
-	int top{};
-	_treeGPEvalByStack<multiOutput>(i_value, i_type, i_subtree_size, i_vars, stack, infos, popSize, maxGPLen, varLen, outLen, s_outs, top);
-	fit = calculate_fit<multiOutput, useMSE>(top, stack, s_outs, i_labels, outLen);
+	float fit = .0f;
 	
+	if (dataPointId < dataPoints){
+		float* stack = (float*)alloca(MAX_STACK * sizeof(float));
+		int16_t* infos = (int16_t*)alloca(2 * MAX_STACK * sizeof(int16_t));
+		
+		//current tree
+		auto i_value = value + nGP * maxGPLen; 
+		auto i_type = type + nGP * maxGPLen;
+		auto i_subtree_size = subtree_size + nGP * maxGPLen;
+
+		// evaluate over data points
+		auto i_vars = variables + dataPointId * varLen;
+		auto i_labels = labels + dataPointId * outLen;
+		float* s_outs{};
+		int top{};
+		_treeGPEvalByStack<multiOutput>(i_value, i_type, i_subtree_size, i_vars, stack, infos, popSize, maxGPLen, varLen, outLen, s_outs, top);
+		fit = calculate_fit<multiOutput, useMSE>(top, stack, s_outs, i_labels, outLen);
+	}
 	sharedFitness[threadId] = fit;
 
 	__syncthreads();
@@ -549,10 +552,12 @@ void advanced_SR_fitness(
 {
 	auto err = cudaMemsetAsync(fitnesses, 0, popSize * sizeof(float));  // clear fitnesses
 	unsigned int block_cnt_per_tree, block_size;
-	block_size = dataPoints < SR_BLOCK_SIZE ? dataPoints : SR_BLOCK_SIZE;
+	block_size = dataPoints <= 256 ? dataPoints : SR_BLOCK_SIZE;  // experience
+	// block_size = dataPoints <= SR_BLOCK_SIZE ? dataPoints : SR_BLOCK_SIZE;
+
+
 	block_cnt_per_tree = (dataPoints - 1) / block_size + 1;
 	dim3 gridSize{popSize, block_cnt_per_tree};  // total blocks
-
 	if (outLen > 1)
 	{
 		if (useMSE)
@@ -569,11 +574,8 @@ void advanced_SR_fitness(
 	}
 
 	// average fitness value
-	int g = 0, b = 0;
-	cudaOccupancyMaxPotentialBlockSize(&g, &b, averageFitnessValueKernel);
-	if(g * b < popSize)
-		g = (popSize - 1) / b + 1;
-	averageFitnessValueKernel<<<g, b>>>(fitnesses, popSize, dataPoints);
+	unsigned int averagethreadBlocks = (popSize - 1) / SR_BLOCK_SIZE + 1;
+	averageFitnessValueKernel<<<averagethreadBlocks, SR_BLOCK_SIZE>>>(fitnesses, popSize, dataPoints);
 }
 
 

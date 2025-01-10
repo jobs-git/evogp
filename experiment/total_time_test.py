@@ -13,8 +13,6 @@ from evogp.algorithm import (
 )
 from evogp.problem import SymbolicRegression
 
-# Forest.set_timmer_mode(True)
-
 
 def func(x):
     val = x[0] ** 4 / (x[0] ** 4 + 1) + x[1] ** 4 / (x[1] ** 4 + 1)
@@ -31,34 +29,53 @@ def run_once(popsize, data_size):
             mutation_rate=0.2,
             generate_configs=Forest.random_generate_check(
                 pop_size=1,
-                gp_len=MAX_STACK,
+                gp_len=400,
                 input_len=2,
                 output_len=1,
                 const_prob=0.5,
-                out_prob=0.5,
-                func_prob={"+": 0.25, "-": 0.25, "*": 0.25, "/": 0.25},
-                layer_leaf_prob=0.2,
-                const_range=(-1, 1),
-                sample_cnt=100,
-                max_layer_cnt=3,
+                out_prob=0,
+                func_prob={
+                    "+": 3,
+                    "-": 3,
+                    "*": 3,
+                    "/": 3,
+                    "sin": 1,
+                    "cos": 1,
+                    "tan": 1,
+                },
+                const_samples=torch.tensor(
+                    [-5.0, -4.0, -3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0, 4.0, 5.0],
+                    device="cuda",
+                ),
+                layer_leaf_prob=0.3,
+                max_layer_cnt=4,
             ),
         ),
         selection=DefaultSelection(survivor_rate=0.3, elite_rate=0.01),
     )
     forest = Forest.random_generate(
         pop_size=popsize,
-        gp_len=MAX_STACK,
+        gp_len=400,
         input_len=2,
         output_len=1,
         const_prob=0.5,
-        out_prob=0.5,
-        func_prob={"+": 0.25, "-": 0.25, "*": 0.25, "/": 0.25},
-        layer_leaf_prob=0.2,
-        const_range=(-1, 1),
-        sample_cnt=100,
+        out_prob=0.0,
+        func_prob={
+            "+": 3,
+            "-": 3,
+            "*": 3,
+            "/": 3,
+            "sin": 1,
+            "cos": 1,
+            "tan": 1,
+        },
+        layer_leaf_prob=0.3,
+        const_samples=torch.tensor(
+            [-5.0, -4.0, -3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0, 4.0, 5.0],
+            device="cuda",
+        ),
         max_layer_cnt=5,
     )
-
 
     algorithm.initialize(forest)
     fitness = problem.evaluate(forest)
@@ -69,8 +86,8 @@ def run_once(popsize, data_size):
         fitness = problem.evaluate(forest, execute_code=3, args_check=False)
     torch.cuda.synchronize()
     total_time_toc = time.time()
-    print(total_time_toc - total_time_tic)
-
+    total_time_cost = total_time_toc - total_time_tic
+    
 
 
 def main():
