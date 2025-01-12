@@ -39,7 +39,7 @@ generate_configs = Forest.random_generate_check(
 algorithm = GeneticProgramming(
     crossover=DefaultCrossover(),
     mutation=DefaultMutation(mutation_rate=0.2, generate_configs=generate_configs),
-    selection=DefaultSelection(survivor_rate=0.3, elite_rate=0.01),
+    selection=DefaultSelection(survival_rate=0.3, elite_rate=0.01),
 )
 
 # initialize the forest
