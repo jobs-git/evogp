@@ -20,7 +20,7 @@ def func(x):
     val = x[0] ** 4 / (x[0] ** 4 + 1) + x[1] ** 4 / (x[1] ** 4 + 1)
     return val.reshape(-1)
 
-problem = SymbolicRegression(func=func, num_inputs=2, num_data=2000, lower_bounds=-5, upper_bounds=5)
+problem = SymbolicRegression(func=func, num_inputs=2, num_data=20000, lower_bounds=-5, upper_bounds=5)
 
 generate_configs = Forest.random_generate_check(
     pop_size=1,
@@ -54,10 +54,10 @@ forest = Forest.random_generate(
 algorithm.initialize(forest)
 fitness = problem.evaluate(forest)
 
-for i in range(30):
+for i in range(20):
     tic = time.time()
     forest = algorithm.step(fitness, args_check=False)
-    fitness = problem.evaluate(forest, execute_code=0, args_check=False)
+    fitness = problem.evaluate(forest, execute_code=4, args_check=False)
     torch.cuda.synchronize()
     toc = time.time()
     print(

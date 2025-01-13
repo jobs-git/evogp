@@ -456,7 +456,7 @@ class Forest:
         inputs: Tensor,
         labels: Tensor,
         use_MSE: bool = True,
-        execute_mode: str = "normal",
+        execute_mode: str = "auto",
     ):
         inputs = check_tensor(inputs)
         labels = check_tensor(labels)
@@ -486,6 +486,8 @@ class Forest:
             execute_code = 2
         elif execute_mode == "advanced":
             execute_code = 3
+        elif execute_mode == "auto":
+            execute_code = 4
 
         return inputs, labels, execute_code
 
