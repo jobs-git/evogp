@@ -267,6 +267,41 @@ class Forest:
 
         return x
 
+    def batch_forward(self, x: Tensor, args_check=True) -> Tensor:
+        if args_check:
+            x = self.batch_forward_check(x)
+        
+        batch_size = x.shape[0]
+        assist_batch_node_value = self.batch_node_value.repeat_interleave(batch_size, dim=0)
+        assist_batch_node_type = self.batch_node_type.repeat_interleave(batch_size, dim=0)
+        assist_batch_subtree_size = self.batch_subtree_size.repeat_interleave(batch_size, dim=0)
+
+        assist_x = x.repeat(self.pop_size, 1)
+
+        assist_res = torch.ops.evogp_cuda.tree_evaluate(
+            self.pop_size * batch_size,  # popsize
+            self.gp_len,  # gp_len
+            self.input_len,  # var_len
+            self.output_len,  # out_len
+            assist_batch_node_value,  # value
+            assist_batch_node_type,  # node_type
+            assist_batch_subtree_size,  # subtree_size
+            assist_x,  # variables
+        )
+
+        res = assist_res.reshape(self.pop_size, batch_size, self.output_len)
+
+        return res
+
+    def batch_forward_check(self, x: Tensor):
+        x = check_tensor(x)
+
+        assert (x.dim() == 2) and (
+            x.shape[1] == self.input_len
+        ), f"x shape[1] should be {self.input_len}, but got {x.shape[1]}"
+
+        return x
+
     def mutate(
         self, replace_pos: Tensor, new_sub_forest: "Forest", args_check=True
     ) -> "Forest":

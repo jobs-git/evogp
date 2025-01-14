@@ -26,7 +26,7 @@ class GeneticProgramming:
         assert self.forest is not None, "forest is not initialized"
         assert fitness.shape == (
             self.forest.pop_size,
-        ), "fitness shape should be ({self.forest.pop_size}, ), but got {fitness.shape}"
+        ), f"fitness shape should be ({self.forest.pop_size}, ), but got {fitness.shape}"
 
         elite_indices, next_indices = self.selection(self.forest, fitness)
         next_forest = self.crossover(
