@@ -478,7 +478,8 @@ __global__ void treeGPRegressionFitnessKernel(
         {
             sharedFitness[threadId] += sharedFitness[threadId + size];
         }
-        __syncthreads();
+		if (size >= 32)
+        	__syncthreads();
     }
 
     // only one atomicAdd in each block
@@ -554,7 +555,6 @@ void advanced_SR_fitness(
 	unsigned int block_cnt_per_tree, block_size;
 	block_size = dataPoints <= 256 ? dataPoints : SR_BLOCK_SIZE;  // experience
 	// block_size = dataPoints <= SR_BLOCK_SIZE ? dataPoints : SR_BLOCK_SIZE;
-
 
 	block_cnt_per_tree = (dataPoints - 1) / block_size + 1;
 	dim3 gridSize{popSize, block_cnt_per_tree};  // total blocks
@@ -683,7 +683,8 @@ __global__ void constant_tree_treeGPRegressionFitnessKernel(
         {
             sharedFitness[threadId] += sharedFitness[threadId + size];
         }
-        __syncthreads();
+		if (size >= 32)
+        	__syncthreads();
     }
 
     // only one atomicAdd in each block
@@ -920,5 +921,13 @@ void SR_fitness(
 		constant_vars_SR_fitness(popSize, dataPoints, gpLen, varLen, outLen, useMSE, value, type, subtree_size, variables, labels, fitnesses);
 	} else if(kernel_type == 3){
 		advanced_SR_fitness(popSize, dataPoints, gpLen, varLen, outLen, useMSE, value, type, subtree_size, variables, labels, fitnesses);
+	}
+	else if(kernel_type == 4){  // auto execute
+		if(dataPoints <= 16384){
+			advanced_SR_fitness(popSize, dataPoints, gpLen, varLen, outLen, useMSE, value, type, subtree_size, variables, labels, fitnesses);
+		}
+		else {
+			constant_tree_SR_fitness(popSize, dataPoints, gpLen, varLen, outLen, useMSE, value, type, subtree_size, variables, labels, fitnesses);
+		}
 	}
 }

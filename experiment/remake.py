@@ -55,15 +55,13 @@ def run_once(popsize, data_size, execution_code=0):
                     "cos": 1,
                     "tan": 1,
                 },
-                const_samples=torch.tensor(
-                    [-5.0, -4.0, -3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0, 4.0, 5.0],
-                    device="cuda",
-                ),
-                layer_leaf_prob=0.3,
-                max_layer_cnt=4,
+                const_range=(-5, 5),
+                sample_cnt=100,
+                layer_leaf_prob=0.2,
+                max_layer_cnt=3,
             ),
         ),
-        selection=DefaultSelection(survival_rate=0.3, elite_rate=0.01),
+        selection=DefaultSelection(survival_rate=0.4, elite_rate=0.1),
     )
     forest = Forest.random_generate(
         pop_size=popsize,
@@ -81,11 +79,9 @@ def run_once(popsize, data_size, execution_code=0):
             "cos": 1,
             "tan": 1,
         },
-        layer_leaf_prob=0.3,
-        const_samples=torch.tensor(
-            [-5.0, -4.0, -3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0, 4.0, 5.0],
-            device="cuda",
-        ),
+        layer_leaf_prob=0.2,
+        const_range=(-5, 5),
+        sample_cnt=100,
         max_layer_cnt=5,
     )
 
@@ -114,7 +110,8 @@ def run_once(popsize, data_size, execution_code=0):
     torch.cuda.synchronize()
     info["SR_time"] = total_sr_time
     info["total_time"] = time.time() - total_time_tic
-
+    info["max_fitness"] = float(fitness.max())
+    info["mean_fitness"] = float(fitness.mean())
     # write file
 
     output_data.append(info)
@@ -130,25 +127,22 @@ def main():
             json.dump([], f)
 
     # create file
-    for p in [
-        10,
-        20,
-        50,
-        100,
-        200,
-        500,
-        1000,
-        2000,
-        5000,
-        10000,
-        20000,
-        50000,
-        100000,
-        200000,
-        500000,
-        1000000,
-    ]:
-        for d in [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384]:
+    for d in [64, 256, 1024, 4096]:
+        for p in [
+            100,
+            200,
+            400,
+            1000,
+            2000,
+            4000,
+            10000,
+            20000,
+            40000,
+            100000,
+            200000,
+            400000,
+            1000000,
+        ]:
             for _ in range(REPEAT_TIMES):
                 gc.collect()
                 torch.cuda.empty_cache()

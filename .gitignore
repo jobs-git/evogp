@@ -51,3 +51,4 @@ test*.pyc
 *.npy
 experiment/data/*
 src/evogp/cuda/forward_new.cu
+

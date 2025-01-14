@@ -491,7 +491,7 @@ class Forest:
         inputs: Tensor,
         labels: Tensor,
         use_MSE: bool = True,
-        execute_mode: str = "normal",
+        execute_mode: str = "auto",
     ):
         inputs = check_tensor(inputs)
         labels = check_tensor(labels)
@@ -521,6 +521,8 @@ class Forest:
             execute_code = 2
         elif execute_mode == "advanced":
             execute_code = 3
+        elif execute_mode == "auto":
+            execute_code = 4
 
         return inputs, labels, execute_code
 
@@ -585,6 +587,7 @@ class Forest:
                 return res
 
             return wrapper
+
         if type(self).random_generate.__name__ == "random_generate":
             type(self).random_generate = debug_wrapper(type(self).random_generate)
         self.forward = debug_wrapper(self.forward)
@@ -599,11 +602,19 @@ class Forest:
                 saved_args = []
                 saved_kwargs = {}
                 for arg in args:
-                    if isinstance(arg, bool) or isinstance(arg, str) or isinstance(arg, int):
+                    if (
+                        isinstance(arg, bool)
+                        or isinstance(arg, str)
+                        or isinstance(arg, int)
+                    ):
                         saved_args.append(arg)
 
                 for key, value in kwargs.items():
-                    if isinstance(value, bool) or isinstance(value, str) or isinstance(value, int):
+                    if (
+                        isinstance(value, bool)
+                        or isinstance(value, str)
+                        or isinstance(value, int)
+                    ):
                         saved_kwargs[key] = value
 
                 tic = time.time()
