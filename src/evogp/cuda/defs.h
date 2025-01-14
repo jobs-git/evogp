@@ -4,8 +4,8 @@
 
 constexpr auto MAX_STACK = 1024, MAX_FULL_DEPTH = 10;
 
-constexpr auto DELTA = 1E-5f;
-constexpr auto MAX_VAL = 1E5f;
+constexpr auto DELTA = 1E-9f;
+constexpr auto MAX_VAL = 1E9f;
 
 typedef enum NodeType
 {

@@ -244,26 +244,53 @@ class Forest:
         if args_check:
             x = self.forward_check(x)
 
-        res = torch.ops.evogp_cuda.tree_evaluate(
-            self.pop_size,  # popsize
-            self.gp_len,  # gp_len
-            self.input_len,  # var_len
-            self.output_len,  # out_len
-            self.batch_node_value,  # value
-            self.batch_node_type,  # node_type
-            self.batch_subtree_size,  # subtree_size
-            x,  # variables
-        )
+        if x.dim() == 2:
+            res = torch.ops.evogp_cuda.tree_evaluate(
+                self.pop_size,  # popsize
+                self.gp_len,  # gp_len
+                self.input_len,  # var_len
+                self.output_len,  # out_len
+                self.batch_node_value,  # value
+                self.batch_node_type,  # node_type
+                self.batch_subtree_size,  # subtree_size
+                x,  # variables
+            )
+        elif x.dim() == 3:
+            res = []
+            for i in range(len(x.shape[0])):
+                res.append(
+                    torch.ops.evogp_cuda.tree_evaluate(
+                        self.pop_size,  # popsize
+                        self.gp_len,  # gp_len
+                        self.input_len,  # var_len
+                        self.output_len,  # out_len
+                        self.batch_node_value,  # value
+                        self.batch_node_type,  # node_type
+                        self.batch_subtree_size,  # subtree_size
+                        x[i],  # variables
+                    )
+                )
+            res = torch.stack(res)
 
         return res
 
     def forward_check(self, x: Tensor):
         x = check_tensor(x)
 
-        assert x.shape == (
-            self.pop_size,
-            self.input_len,
-        ), f"x shape should be ({self.pop_size}, {self.input_len}), but got {x.shape}"
+        assert (
+            x.dim() == 2 or x.dim() == 3
+        ), f"x dim should be 2 or 3, but got {x.dim()}"
+
+        if x.dim() == 3:
+            assert (x.shape[0] == self.pop_size) and (
+                x.shape[2] == self.input_len
+            ), f"x shape should be ({self.pop_size}, 1, {self.input_len}), but got {x.shape}"
+
+        if x.dim() == 2:
+            assert x.shape == (
+                self.pop_size,
+                self.input_len,
+            ), f"x shape should be ({self.pop_size}, {self.input_len}), but got {x.shape}"
 
         return x
 
@@ -552,6 +579,7 @@ class Forest:
                 return res
 
             return wrapper
+
         if type(self).random_generate.__name__ == "random_generate":
             type(self).random_generate = debug_wrapper(type(self).random_generate)
         self.forward = debug_wrapper(self.forward)
@@ -566,11 +594,19 @@ class Forest:
                 saved_args = []
                 saved_kwargs = {}
                 for arg in args:
-                    if isinstance(arg, bool) or isinstance(arg, str) or isinstance(arg, int):
+                    if (
+                        isinstance(arg, bool)
+                        or isinstance(arg, str)
+                        or isinstance(arg, int)
+                    ):
                         saved_args.append(arg)
 
                 for key, value in kwargs.items():
-                    if isinstance(value, bool) or isinstance(value, str) or isinstance(value, int):
+                    if (
+                        isinstance(value, bool)
+                        or isinstance(value, str)
+                        or isinstance(value, int)
+                    ):
                         saved_kwargs[key] = value
 
                 tic = time.time()
