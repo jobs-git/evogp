@@ -1,5 +1,3 @@
-from typing import Optional, Callable
-
 import torch
 from torch import Tensor
 from . import BaseProblem

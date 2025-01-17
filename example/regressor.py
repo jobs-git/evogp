@@ -1,41 +1,30 @@
-from typing import Callable
 import torch
 
 torch.random.manual_seed(0)
 torch.cuda.manual_seed(0)
 
 import time
-from evogp.tree import Tree, Forest, MAX_STACK
+from evogp.tree import Forest
 from evogp.algorithm import (
     GeneticProgramming,
     DefaultSelection,
     DefaultMutation,
     DefaultCrossover,
 )
-from evogp.problem import SymbolicRegression, Classification
+from evogp.problem import SymbolicRegression
 
+# Forest.set_timmer_mode(True)
 
-def print_color(text):
-    print(f"\033[33m{text}\033[0m")
+def func(x):
+    val = x[0] ** 4 / (x[0] ** 4 + 1) + x[1] ** 4 / (x[1] ** 4 + 1)
+    return val.reshape(-1)
 
-
-ml_problem = {
-    "iris": {"input_len": 4, "output_len": 3, "sample_cnt": 150},
-    "wine": {"input_len": 13, "output_len": 3, "sample_cnt": 178},
-    "breast_cancer": {"input_len": 30, "output_len": 2, "sample_cnt": 569},
-    "digits": {"input_len": 64, "output_len": 10, "sample_cnt": 1797},
-}
-
-name = list(ml_problem.keys())[2]
-multi_output = True
-print_color(f"Problem: {name}, multi_output: {multi_output}")
-
-problem = Classification(name, multi_output)
+problem = SymbolicRegression(func=func, num_inputs=2, num_data=20000, lower_bounds=-5, upper_bounds=5)
 
 generate_configs = Forest.random_generate_check(
     pop_size=1,
-    gp_len=1024,
-    input_len=4,
+    gp_len=128,
+    input_len=2,
     output_len=1,
     const_prob=0.5,
     out_prob=0.5,
@@ -43,7 +32,7 @@ generate_configs = Forest.random_generate_check(
     layer_leaf_prob=0.2,
     const_range=(-5, 5),
     sample_cnt=8,
-    max_layer_cnt=5,
+    max_layer_cnt=5
 )
 
 algorithm = GeneticProgramming(
@@ -56,18 +45,18 @@ algorithm = GeneticProgramming(
 forest = Forest.random_generate(
     pop_size=int(5000),
     gp_len=128,
-    input_len=ml_problem[name]["input_len"],
-    output_len=ml_problem[name]["output_len"] if multi_output else 1,
+    input_len=2,
+    output_len=1,
     **generate_configs,
 )
 
 algorithm.initialize(forest)
 fitness = problem.evaluate(forest)
 
-for i in range(100):
+for i in range(50):
     tic = time.time()
     forest = algorithm.step(fitness, args_check=False)
-    fitness = problem.evaluate(forest)
+    fitness = problem.evaluate(forest, execute_code=4, args_check=False)
     torch.cuda.synchronize()
     toc = time.time()
     print(f"step: {i}, max_fitness: {fitness.max()}")
