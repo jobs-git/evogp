@@ -47,7 +47,7 @@ setup(
         )
     ],
     cmdclass={"build_ext": BuildExtension.with_options(parallel=True)},
-    # options={"build_ext": {"build_lib": "./src/evogp"}},
+    options={"build_ext": {"build_lib": "./src/evogp"}},
     install_requires=[
         "torch",
         "numpy",
