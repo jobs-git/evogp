@@ -1,3 +1,5 @@
+from typing import Optional
+
 import torch
 from torch import Tensor
 from . import BaseProblem
@@ -7,13 +9,27 @@ from sklearn.datasets import load_iris, load_wine, load_breast_cancer, load_digi
 
 
 class Classification(BaseProblem):
-    def __init__(self, dataset: str, multi_output=False):
-        self.datapoints, self.labels = self.generate_data(dataset)
+    def __init__(
+        self,
+        multi_output: bool = False,
+        datapoints: Optional[Tensor] = None,
+        labels: Optional[Tensor] = None,
+        dataset: Optional[str] = None,
+    ):
+        self.multi_output = multi_output
+        if datapoints is not None and labels is not None:
+            self.datapoints = datapoints
+            self.labels = labels
+        else:
+            assert (
+                dataset is not None
+            ), "dataset must be provided when datapoints and labels are not provided"
+            self.datapoints, self.labels = self.generate_data(dataset)
+
         self.onehot_labels = torch.zeros(
             self.labels.size(0), self.maximum + 1, device="cuda"
         )
         self.onehot_labels.scatter_(1, self.labels.long().unsqueeze(1), 1)
-        self.multi_output = multi_output
 
     def generate_data(self, dataset: str):
         if dataset == "iris":

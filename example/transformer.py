@@ -24,12 +24,12 @@ transformation_problem = {
 name = list(transformation_problem.keys())[0]
 print_color(f"Problem: {name}")
 
-problem = Transformation(name)
+problem = Transformation(dataset=name)
 
 generate_configs = Forest.random_generate_check(
     pop_size=1,
     gp_len=128,
-    input_len=4,
+    input_len=transformation_problem[name]["input_len"],
     output_len=1,
     const_prob=0.5,
     out_prob=0.5,
