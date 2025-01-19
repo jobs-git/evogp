@@ -1,4 +1,7 @@
+from typing import Optional
+
 import torch
+from torch import Tensor
 from . import BaseProblem
 from evogp.tree import Forest
 
@@ -6,8 +9,20 @@ from sklearn.datasets import load_diabetes
 
 
 class Transformation(BaseProblem):
-    def __init__(self, dataset: str):
-        self.datapoints, self.labels = self.generate_data(dataset)
+    def __init__(
+        self,
+        datapoints: Optional[Tensor] = None,
+        labels: Optional[Tensor] = None,
+        dataset: Optional[str] = None,
+    ):
+        if datapoints is not None and labels is not None:
+            self.datapoints = datapoints
+            self.labels = labels
+        else:
+            assert (
+                dataset is not None
+            ), "dataset must be provided when datapoints and labels are not provided"
+            self.datapoints, self.labels = self.generate_data(dataset)
 
     def generate_data(self, dataset: str):
         if dataset == "diabetes":

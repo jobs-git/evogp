@@ -8,8 +8,11 @@ from evogp.tree import Forest
 from evogp.algorithm import (
     GeneticProgramming,
     DefaultSelection,
+    TruncationSelection,
     DefaultMutation,
     DefaultCrossover,
+    DiversityCrossover,
+    TournamentSelector,
 )
 from evogp.problem import Classification
 
@@ -33,7 +36,7 @@ problem = Classification(multi_output, dataset=name)
 
 generate_configs = Forest.random_generate_check(
     pop_size=1,
-    gp_len=128,
+    gp_len=256,
     input_len=classification_problem[name]["input_len"],
     output_len=classification_problem[name]["output_len"] if multi_output else 1,
     const_prob=0.5,
@@ -46,15 +49,19 @@ generate_configs = Forest.random_generate_check(
 )
 
 algorithm = GeneticProgramming(
-    crossover=DefaultCrossover(),
+    crossover=DiversityCrossover(
+        crossover_rate=0.9,
+        recipient_selector=TournamentSelector(20, best_probability=0.9),
+        donor_selector=TournamentSelector(20, best_probability=0.9),
+    ),
     mutation=DefaultMutation(mutation_rate=0.2, generate_configs=generate_configs),
-    selection=DefaultSelection(survival_rate=0.3, elite_rate=0.01),
+    selection=TruncationSelection(survivor_rate=1, elite_rate=0.01),
 )
 
 # initialize the forest
 forest = Forest.random_generate(
     pop_size=int(5000),
-    gp_len=128,
+    gp_len=256,
     input_len=classification_problem[name]["input_len"],
     output_len=classification_problem[name]["output_len"] if multi_output else 1,
     **generate_configs,
