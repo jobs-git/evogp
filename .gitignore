@@ -43,7 +43,7 @@ dist/
 Thumbs.db
 
 # Ignore any local test data
-test/
+# test/
 output/
 test*.pyc
 
