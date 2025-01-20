@@ -1,7 +1,7 @@
 import torch
 from torch import Tensor
 from .utils import *
-from . import GenerateDiscriptor
+from .descriptor import GenerateDiscriptor
 
 
 class Tree:

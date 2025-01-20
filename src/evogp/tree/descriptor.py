@@ -2,13 +2,13 @@ import warnings
 from typing import Optional, Tuple, Union
 import torch
 from torch import Tensor
-from utils import MAX_STACK, MAX_FULL_DEPTH, dict2cdf, check_tensor, Func
+from .utils import MAX_STACK, MAX_FULL_DEPTH, dict2cdf, check_tensor, Func
 
 
 class GenerateDiscriptor:
     def __init__(
         self,
-        tree_max_len: int,
+        max_tree_len: int,
         input_len: int,
         output_len: int,
         const_prob: float,
@@ -26,8 +26,8 @@ class GenerateDiscriptor:
         self.__params = {key: value for key, value in locals().items() if key != "self"}
 
         assert (
-            tree_max_len <= MAX_STACK
-        ), f"tree_max_len={tree_max_len} is too large, MAX_STACK={MAX_STACK}"
+            max_tree_len <= MAX_STACK
+        ), f"max_tree_len={max_tree_len} is too large, MAX_STACK={MAX_STACK}"
 
         assert (
             isinstance(input_len, int) and input_len > 0
@@ -54,8 +54,8 @@ class GenerateDiscriptor:
                 layer_leaf_prob is not None
             ), "layer_leaf_prob should not be None when depth2leaf_probs is None"
             assert (
-                2**max_layer_cnt <= gp_len
-            ), f"max_layer_cnt is too large for gp_len={gp_len}"
+                2**max_layer_cnt <= max_tree_len
+            ), f"max_layer_cnt is too large for max_tree_len={max_tree_len}"
 
             depth2leaf_probs = torch.tensor(
                 [layer_leaf_prob] * max_layer_cnt
@@ -110,7 +110,7 @@ class GenerateDiscriptor:
             const_samples.dim() == 1
         ), f"const_samples dim should be 1, but got {const_samples.dim()}"
 
-        self.tree_max_len = tree_max_len
+        self.max_tree_len = max_tree_len
         self.input_len = input_len
         self.output_len = output_len
         self.const_prob = const_prob

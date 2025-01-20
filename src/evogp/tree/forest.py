@@ -4,7 +4,8 @@ import torch
 from torch import Tensor
 import numpy as np
 from .utils import *
-from . import Tree, GenerateDiscriptor
+from .tree import Tree
+from .descriptor import GenerateDiscriptor
 
 
 class Forest:
@@ -62,7 +63,7 @@ class Forest:
             batch_subtree_size,
         ) = torch.ops.evogp_cuda.tree_generate(
             pop_size,
-            descriptor.tree_max_len,
+            descriptor.max_tree_len,
             descriptor.input_len,
             descriptor.output_len,
             descriptor.const_samples.shape[0],

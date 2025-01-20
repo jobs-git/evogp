@@ -3,7 +3,7 @@ import torch
 from torch import Tensor
 
 from .base import BaseMutation
-from ...tree import Forest, MAX_STACK
+from ...tree import Forest, MAX_STACK, GenerateDiscriptor
 
 
 class DefaultMutation(BaseMutation):
@@ -11,10 +11,10 @@ class DefaultMutation(BaseMutation):
     def __init__(
         self,
         mutation_rate: float,
-        generate_configs: dict,
+        descriptor: GenerateDiscriptor,
     ):
         self.mutation_rate = mutation_rate
-        self.generate_configs = generate_configs
+        self.descriptor = descriptor
 
     def __call__(self, forest: Forest):
         # determine which trees need to mutate
@@ -29,10 +29,7 @@ class DefaultMutation(BaseMutation):
         # generate sub trees
         sub_forest = Forest.random_generate(
             pop_size=forest_to_mutate.pop_size,
-            gp_len=forest_to_mutate.gp_len,
-            input_len=forest_to_mutate.input_len,
-            output_len=forest_to_mutate.output_len,
-            **self.generate_configs,
+            descriptor=self.descriptor
         )
         # generate mutation positions
         mutate_positions_unlimited = torch.randint(
