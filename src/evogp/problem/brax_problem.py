@@ -8,6 +8,7 @@ import torch
 from typing import Callable
 from evogp.tree import Forest
 
+from . import BaseProblem
 
 def to_jax_array(x: torch.Tensor) -> jax.Array:
     return jax.dlpack.from_dlpack(x.detach())
@@ -17,7 +18,7 @@ def from_jax_array(x: jax.Array) -> torch.Tensor:
     return torch.utils.dlpack.from_dlpack(x)
 
 
-class BraxProblem:
+class BraxProblem(BaseProblem):
     def __init__(
         self,
         env_name: str,

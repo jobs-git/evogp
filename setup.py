@@ -1,6 +1,8 @@
 import os
 from setuptools import setup, find_packages
 from torch.utils.cpp_extension import CUDAExtension, BuildExtension
+from setuptools.command.install import install
+import shutil
 
 cpu_count = os.cpu_count()
 if cpu_count:
@@ -10,6 +12,29 @@ else:
 
 with open("README.md", "r", encoding="utf-8") as f:
     long_description = f.read()
+
+
+class CustomBuildExtCommand(BuildExtension.with_options(parallel=True)):
+    def run(self):
+        super().run()
+        build_lib = os.path.abspath(self.build_lib)
+        target_dir = os.path.join(build_lib, "evogp")
+        os.makedirs(target_dir, exist_ok=True)
+
+        for ext in self.extensions:
+            if ext.name == "evogp_cuda":
+                ext_path = self.get_ext_fullpath(ext.name)
+                target_path = os.path.join(
+                    build_lib, "evogp", os.path.basename(ext_path)
+                )
+                print(f"Copying {ext_path} to {target_path}")
+                shutil.copy2(ext_path, target_path)
+
+
+class CustomInstallCommand(install):
+    def run(self):
+        super().run()
+
 
 setup(
     name="evogp",
@@ -46,8 +71,10 @@ setup(
             },
         )
     ],
-    cmdclass={"build_ext": BuildExtension.with_options(parallel=True)},
-    options={"build_ext": {"build_lib": "./src/evogp"}},
+    cmdclass={
+        "build_ext": CustomBuildExtCommand,
+        "install": CustomInstallCommand,
+    },
     install_requires=[
         "torch",
         "numpy",
