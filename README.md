@@ -186,144 +186,26 @@ print(forest[int(fitness.argmax())].to_infix())
 
 
 ## Advanced Genetic Operations
+| Type       | Name                                  |
+|------------|---------------------------------------|
+| Selection  | [DefaultSelection](src/evogp/algorithm/selection/default.py) |
+| Selection  | [RouletteSelection](src/evogp/algorithm/selection/roulette.py) |
+| Selection  | [TruncationSelection](src/evogp/algorithm/selection/truncation.py) |
+| Selection  | [RankSelection](src/evogp/algorithm/selection/rank.py) |
+| Selection  | [TournamentSelection](src/evogp/algorithm/selection/tournament.py) |
+| Crossover  | [DefaultCrossover](src/evogp/algorithm/crossover/default.py) |
+| Crossover  | [DiversityCrossover](src/evogp/algorithm/crossover/diversity.py) |
+| Crossover  | [LeafBiasedCrossover](src/evogp/algorithm/crossover/leaf_biased.py) |
+| Mutation   | [DefaultMutation](src/evogp/algorithm/mutation/default.py) |
+| Mutation   | [HoistMutation](src/evogp/algorithm/mutation/hoist.py) |
+| Mutation   | [SinglePointMutation](src/evogp/algorithm/mutation/single_point.py) |
+| Mutation   | [MultiPointMutation](src/evogp/algorithm/mutation/multi_point.py) |
+| Mutation   | [InsertMutation](src/evogp/algorithm/mutation/insert.py) |
+| Mutation   | [DeleteMutation](src/evogp/algorithm/mutation/delete.py) |
+| Mutation   | [SingleConstMutation](src/evogp/algorithm/mutation/single_const.py) |
+| Mutation   | [MultiConstMutation](src/evogp/algorithm/mutation/multi_const.py) |
+| Mutation   | [CombinedMutation](src/evogp/algorithm/mutation/combined.py) |
 
-### Selection
-
-1. **DefaultSelection**: In the default selection strategy, a certain proportion of elite individuals (those ranked at the top of the population by fitness) are preserved first. Then, individuals ranked at the bottom of the population are eliminated based on the survival rate.
-
-   ```python
-   DefaultSelection(survival_rate=0.3, elite_rate=0.01)
-   ```
-
-2. **RouletteSelection**: Each individual is selected with a probability proportional to its fitness, ensuring that individuals with higher fitness are more likely to be chosen for the next generation.
-
-   ```python
-   DefaultSelection(survival_rate=0.3, elite_rate=0.01)
-   ```
-
-3. **TruncationSelection**: All individuals are sorted by their fitness, and a certain proportion of low-fitness individuals are excluded. The next generation is then created by randomly sampling from the remaining individuals with replacement and equal probability.
-
-   ```python
-   TruncationSelection(survival_rate=0.3, elite_rate=0.01)
-   ```
-
-4. **RankSelection**: Individuals are sorted by fitness, and their selection probabilities are calculated using the following formula:
-   $$
-   P(R_i) = \frac{1}{n} \left( 1 + sp \left(1 - \frac{2i}{n-1}\right) \right) \quad \text{for } 0 \leq i \leq n-1, \quad 0 \leq sp \leq 1
-   $$
-   where $n$ is the population size, $i$ is the individual's rank, and $sp$ represents the selection pressure (higher values correspond to greater pressure). Individuals are then selected with replacement based on these probabilities.
-
-   ```python
-   RankSelection(survival_rate=0.3, elite_rate=0.01, selection_pressure=0.5)
-   ```
-
-5. **TournamentSelection**: A specified number of individuals are randomly selected from the population to compete in a tournament. The winner is chosen based on a probability parameter favoring the best-performing individual. Both with-replacement and without-replacement sampling modes are supported. For without-replacement sampling, individuals with fewer prior selections are preferred in forming tournaments.
-
-   ```python
-   TournamentSelection(
-       survival_rate=0.3,
-       elite_rate=0.01,
-       tournament_size=20,
-       best_probability=0.9,
-       replace=False,
-   )
-   ```
-
----
-
-### Crossover
-
-1. **DefaultCrossover**: A random subtree of the recipient is replaced with a random subtree from the donor. Both the recipient and donor are chosen randomly.
-
-   ```python
-   DefaultCrossover()
-   ```
-
-2. **DiversityCrossover**: Similar to `DefaultCrossover`, but the recipient and donor can be selected using specific selection operators from the surviving individuals. Additionally, a `crossover_rate` parameter allows a certain proportion of individuals to bypass the crossover process.
-
-   ```python
-   DiversityCrossover(
-       crossover_rate=0.9,
-       recipient_selector=RouletteSelector,
-       donor_selector=RankSelector(selection_pressure=0.8),
-   )
-   ```
-
-3. **LeafBiasedCrossover**: Builds on `DiversityCrossover` by introducing a `leaf_bias` parameter. With a specified probability, crossover is restricted to exchanges between leaf nodes, ensuring more stable crossover operations.
-
-   ```python
-   DiversityCrossover(
-       crossover_rate=0.9,
-       recipient_selector=RouletteSelector,
-       donor_selector=RankSelector(selection_pressure=0.8),
-       leaf_bias=0.3,
-   )
-   ```
-
----
-
-### Mutation
-
-1. **DefaultMutation**: A randomly selected subtree is replaced with a newly generated random subtree.
-
-   ```python
-   DefaultMutation(mutation_rate=0.2, generate_configs=generate_configs)
-   ```
-
-2. **HoistMutation**: A subtree of a GP individual is randomly selected, and then a subtree within it is further selected and moved to replace the original subtree's root. This operation helps mitigate excessive growth (bloating) in GP individuals.
-
-   ```python
-   HoistMutation(mutation_rate=0.2)
-   ```
-
-3. **SinglePointMutation**: A random node is selected and replaced with a new node of the same type, selected randomly from the node pool.
-
-   ```python
-   SinglePointMutation(mutation_rate=0.2)
-   ```
-
-4. **MultiPointMutation**: A specific number of nodes (calculated as `mutation_intensity × tree_size`) are randomly selected within an individual, and each undergoes `SinglePointMutation`.
-
-   ```python
-   MultiPointMutation(mutation_rate=0.2, mutation_intensity=0.3)
-   ```
-
-5. **InsertMutation**: A random basic operator is inserted into the individual.
-
-   ```python
-   InsertMutation(mutation_rate=0.2, generate_configs=generate_configs)
-   ```
-
-6. **DeleteMutation**: A random basic operator is removed from the individual.
-
-   ```python
-   DeleteMutation(mutation_rate=0.2)
-   ```
-
-7. **SingleConstMutation**: A random constant node is selected and modified to a new constant value.
-
-   ```python
-   SingleConstMutation(mutation_rate=0.2)
-   ```
-
-8. **MultiConstMutation**: A specific number of constant nodes (calculated as `mutation_intensity × tree_size`) are randomly selected and modified to new constant values.
-
-   ```python
-   MultiConstMutation(mutation_rate=0.2, mutation_intensity=0.3)
-   ```
-
-9. **CombinedMutation**: Combines multiple mutation strategies into a single comprehensive mutation operation.
-
-   ```python
-   CombinedMutation(
-       [
-           DefaultMutation(mutation_rate=0.2, generate_configs=generate_configs),
-           HoistMutation(mutation_rate=0.2),
-           MultiPointMutation(mutation_rate=0.2, mutation_intensity=0.3),
-           InsertMutation(mutation_rate=0.2, generate_configs=generate_configs),
-       ]
-   )
-   ```
 
 ## Supported Tasks
 
