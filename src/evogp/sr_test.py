@@ -41,7 +41,7 @@ algorithm = GeneticProgramming(
 
 # initialize the forest
 forest = Forest.random_generate(
-    pop_size=int(5000),
+    pop_size=int(1000),
     gp_len=128,
     input_len=2,
     output_len=1,

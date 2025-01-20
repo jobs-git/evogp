@@ -69,7 +69,7 @@ For example, if you are using CUDA 11.8:
    ```bash
    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
    ```
-⚠️ **Important:** Make sure to select the PyTorch version compatible with the **CUDA Toolkit** version (`nvcc -V`), not the Nvidia driver version.  
+⚠️ **Important:** Make sure to select the PyTorch version compatible with the **CUDA Toolkit** version (`nvcc -V`), not the NVIDIA driver version.  
 
 You can find more details on the [PyTorch installation page](https://pytorch.org/get-started/locally/).
 
@@ -77,6 +77,11 @@ You can find more details on the [PyTorch installation page](https://pytorch.org
 Finally, install EvoGP:  
 ```bash
 pip install git+https://github.com/EMI-Group/evogp.git
+```
+
+### 5. Validate Installation
+```python
+python -m evogp.sr_test
 ```
 
 ## Basic API Usage
