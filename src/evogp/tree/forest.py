@@ -4,14 +4,10 @@ import torch
 from torch import Tensor
 import numpy as np
 from .utils import *
-from . import Tree
+from . import Tree, GenerateDiscriptor
 
 
 class Forest:
-
-    __debug_mode = False
-    __timmer_mode = False
-    __shared_time_record = []
 
     def __init__(
         self,
@@ -23,94 +19,33 @@ class Forest:
     ):
         self.input_len = input_len
         self.output_len = output_len
-        self.pop_size, self.gp_len = batch_node_value.shape
+        self.pop_size, self.max_tree_len = batch_node_value.shape
 
         assert batch_node_value.shape == (
             self.pop_size,
-            self.gp_len,
-        ), f"node_value shape should be ({self.pop_size}, {self.gp_len}), but got {batch_node_value.shape}"
+            self.max_tree_len,
+        ), f"node_value shape should be ({self.pop_size}, {self.max_tree_len}), but got {batch_node_value.shape}"
         assert batch_node_type.shape == (
             self.pop_size,
-            self.gp_len,
-        ), f"node_type shape should be ({self.pop_size}, {self.gp_len}), but got {batch_node_type.shape}"
+            self.max_tree_len,
+        ), f"node_type shape should be ({self.pop_size}, {self.max_tree_len}), but got {batch_node_type.shape}"
         assert batch_subtree_size.shape == (
             self.pop_size,
-            self.gp_len,
-        ), f"subtree_size shape should be ({self.pop_size}, {self.gp_len}), but got {batch_subtree_size.shape}"
+            self.max_tree_len,
+        ), f"subtree_size shape should be ({self.pop_size}, {self.max_tree_len}), but got {batch_subtree_size.shape}"
 
         self.batch_node_value = batch_node_value
         self.batch_node_type = batch_node_type
         self.batch_subtree_size = batch_subtree_size
 
-        if self.__debug_mode:
-            self.__using_debug_mode()
-
-        if self.__timmer_mode:
-            self.__using_timmer_mode()
-
     @staticmethod
     def random_generate(
         pop_size: int,
-        gp_len: int,
-        input_len: int,
-        output_len: int,
-        const_prob: float,
-        out_prob: Optional[float] = None,
-        depth2leaf_probs: Optional[Tensor] = None,
-        roulette_funcs: Optional[Tensor] = None,
-        const_samples: Optional[Tensor] = None,
-        func_prob: Optional[dict] = None,
-        max_layer_cnt: Optional[int] = None,
-        layer_leaf_prob: Optional[float] = None,
-        const_range: Optional[Tuple[float, float]] = None,
-        sample_cnt: Optional[int] = None,
-        args_check: bool = True,
+        descriptor: GenerateDiscriptor,
     ) -> "Forest":
-        """
-        Randomly generate a forest.
-
-        Args:
-            pop_size: The population size of the forest.
-            gp_len: The length of each GP.
-            input_len: The number of inputs of each GP.
-            output_len: The number of outputs of each GP.
-            const_prob: The probability of generating a constant node.
-            out_prob (optional): The probability of generating an output node.
-            depth2leaf_probs (optional): The probability of generating a leaf node at each depth.
-            roulette_funcs (optional): The probability of generating each function.
-            const_samples (optional): The samples of constant values.
-            func_prob (optional): The probability of generating each function.
-            max_layer_cnt (optional): The maximum number of layers of the GP.
-            layer_leaf_prob (optional): The probability of generating a leaf node at each layer.
-            const_range (optional): The range of constant values.
-            sample_cnt (optional): The number of samples of constant values.
-
-        Returns:
-            A Forest object.
-        """
-
-        if args_check:
-            generate_configs = Forest.random_generate_check(
-                pop_size,
-                gp_len,
-                input_len,
-                output_len,
-                const_prob,
-                out_prob,
-                depth2leaf_probs,
-                roulette_funcs,
-                const_samples,
-                func_prob,
-                max_layer_cnt,
-                layer_leaf_prob,
-                const_range,
-                sample_cnt,
-            )
-            const_prob = generate_configs["const_prob"]
-            out_prob = generate_configs["out_prob"]
-            depth2leaf_probs = generate_configs["depth2leaf_probs"]
-            roulette_funcs = generate_configs["roulette_funcs"]
-            const_samples = generate_configs["const_samples"]
+        assert (
+            isinstance(pop_size, int) and pop_size > 0
+        ), "pop_size should be a positive integer"
 
         keys = torch.randint(
             low=0,
@@ -127,109 +62,25 @@ class Forest:
             batch_subtree_size,
         ) = torch.ops.evogp_cuda.tree_generate(
             pop_size,
-            gp_len,
-            input_len,
-            output_len,
-            const_samples.shape[0],
-            out_prob,
-            const_prob,
+            descriptor.tree_max_len,
+            descriptor.input_len,
+            descriptor.output_len,
+            descriptor.const_samples.shape[0],
+            descriptor.out_prob,
+            descriptor.const_prob,
             keys,
-            depth2leaf_probs,
-            roulette_funcs,
-            const_samples,
+            descriptor.depth2leaf_probs,
+            descriptor.roulette_funcs,
+            descriptor.const_samples,
         )
 
         return Forest(
-            input_len,
-            output_len,
+            descriptor.input_len,
+            descriptor.output_len,
             batch_node_value,
             batch_node_type,
             batch_subtree_size,
         )
-
-    @staticmethod
-    def random_generate_check(
-        pop_size: int,
-        gp_len: int,
-        input_len: int,
-        output_len: int,
-        const_prob: float,
-        out_prob: Optional[float] = None,
-        depth2leaf_probs: Optional[Tensor] = None,
-        roulette_funcs: Optional[Tensor] = None,
-        const_samples: Optional[Tensor] = None,
-        func_prob: Optional[dict] = None,
-        max_layer_cnt: Optional[int] = None,
-        layer_leaf_prob: Optional[float] = None,
-        const_range: Optional[Tuple[float, float]] = None,
-        sample_cnt: Optional[int] = None,
-    ):
-        assert (
-            gp_len <= MAX_STACK
-        ), f"gp_len={gp_len} is too large, MAX_STACK={MAX_STACK}"
-
-        if depth2leaf_probs is None:
-            assert (
-                max_layer_cnt is not None
-            ), "max_layer_cnt should not be None when depth2leaf_probs is None"
-            assert (
-                layer_leaf_prob is not None
-            ), "layer_leaf_prob should not be None when depth2leaf_probs is None"
-            assert (
-                2**max_layer_cnt <= gp_len
-            ), f"max_layer_cnt is too large for gp_len={gp_len}"
-
-            depth2leaf_probs = torch.tensor(
-                [layer_leaf_prob] * max_layer_cnt
-                + [1.0] * (MAX_FULL_DEPTH - max_layer_cnt),
-                device="cuda",
-                requires_grad=False,
-            )
-        if roulette_funcs is None:
-            assert (
-                func_prob is not None
-            ), "func_prob should not be None when roulette_funcs is None"
-            roulette_funcs = torch.tensor(
-                dict2cdf(func_prob),
-                dtype=torch.float32,
-                device="cuda",
-                requires_grad=False,
-            )
-        if const_samples is None:
-            assert (
-                const_range is not None
-            ), "const_range should not be None when const_samples is None"
-            assert (
-                sample_cnt is not None
-            ), "sample_cnt should not be None when const_samples is None"
-            const_samples = (
-                torch.rand(sample_cnt, device="cuda", requires_grad=False)
-                * (const_range[1] - const_range[0])
-                + const_range[0]
-            )
-
-        if output_len > 1:
-            assert (
-                out_prob is not None
-            ), "out_prob should not be None when output_len > 1"
-
-        assert depth2leaf_probs.shape == (
-            MAX_FULL_DEPTH,
-        ), f"depth2leaf_probs shape should be ({MAX_FULL_DEPTH}), but got {depth2leaf_probs.shape}"
-        assert roulette_funcs.shape == (
-            Func.END,
-        ), f"roulette_funcs shape should be ({Func.END}), but got {roulette_funcs.shape}"
-        assert (
-            const_samples.dim() == 1
-        ), f"const_samples dim should be 1, but got {const_samples.dim()}"
-
-        return {
-            "const_prob": const_prob,
-            "out_prob": out_prob,
-            "depth2leaf_probs": depth2leaf_probs,
-            "roulette_funcs": roulette_funcs,
-            "const_samples": const_samples,
-        }
 
     def forward(self, x: Tensor) -> Tensor:
         """
@@ -249,14 +100,14 @@ class Forest:
         ), f"x shape should be ({self.pop_size}, {self.input_len}), but got {x.shape}"
 
         res = torch.ops.evogp_cuda.tree_evaluate(
-            self.pop_size,  # popsize
-            self.gp_len,  # gp_len
-            self.input_len,  # var_len
-            self.output_len,  # out_len
-            self.batch_node_value,  # value
-            self.batch_node_type,  # node_type
-            self.batch_subtree_size,  # subtree_size
-            x,  # variables
+            self.pop_size,
+            self.max_tree_len, 
+            self.input_len,
+            self.output_len,
+            self.batch_node_value,
+            self.batch_node_type,
+            self.batch_subtree_size,
+            x,
         )
 
         return res
@@ -282,14 +133,14 @@ class Forest:
         assist_x = x.repeat(self.pop_size, 1)
 
         assist_res = torch.ops.evogp_cuda.tree_evaluate(
-            self.pop_size * batch_size,  # popsize
-            self.gp_len,  # gp_len
-            self.input_len,  # var_len
-            self.output_len,  # out_len
-            assist_batch_node_value,  # value
-            assist_batch_node_type,  # node_type
-            assist_batch_subtree_size,  # subtree_size
-            assist_x,  # variables
+            self.pop_size * batch_size,
+            self.max_tree_len,
+            self.input_len,
+            self.output_len,
+            assist_batch_node_value,
+            assist_batch_node_type,  
+            assist_batch_subtree_size,
+            assist_x,
         )
 
         res = assist_res.reshape(self.pop_size, batch_size, self.output_len)
@@ -324,8 +175,8 @@ class Forest:
             self.output_len == new_sub_forest.output_len
         ), f"output_len should be {self.output_len}, but got {new_sub_forest.output_len}"
         assert (
-            self.gp_len == new_sub_forest.gp_len
-        ), f"gp_len should be {self.gp_len}, but got {new_sub_forest.gp_len}"
+            self.max_tree_len == new_sub_forest.max_tree_len
+        ), f"max_tree_len should be {self.max_tree_len}, but got {new_sub_forest.max_tree_len}"
 
         # Perform mutation operation using CUDA
         (
@@ -334,7 +185,7 @@ class Forest:
             batch_subtree_size,
         ) = torch.ops.evogp_cuda.tree_mutate(
             self.pop_size,
-            self.gp_len,
+            self.max_tree_len,
             self.batch_node_value,
             self.batch_node_type,
             self.batch_subtree_size,
@@ -401,7 +252,7 @@ class Forest:
         ) = torch.ops.evogp_cuda.tree_crossover(
             self.pop_size,
             res_forest_size,
-            self.gp_len,
+            self.max_tree_len,
             self.batch_node_value,
             self.batch_node_type,
             self.batch_subtree_size,
@@ -472,7 +323,7 @@ class Forest:
         res = torch.ops.evogp_cuda.tree_SR_fitness(
             self.pop_size,
             batch_size,
-            self.gp_len,
+            self.max_tree_len,
             self.input_len,
             self.output_len,
             use_MSE,
@@ -603,7 +454,7 @@ class Forest:
     def __setstate__(self, state):
         self.input_len = state["input_len"]
         self.output_len = state["output_len"]
-        self.pop_size, self.gp_len = state["batch_node_value"].shape
+        self.pop_size, self.max_tree_len = state["batch_node_value"].shape
         self.batch_node_value = (
             torch.from_numpy(state["batch_node_value"]).to("cuda").requires_grad_(False)
         )

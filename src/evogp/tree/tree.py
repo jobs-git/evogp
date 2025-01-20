@@ -1,6 +1,7 @@
 import torch
 from torch import Tensor
 from .utils import *
+from . import GenerateDiscriptor
 
 
 class Tree:
@@ -14,28 +15,28 @@ class Tree:
     ):
         self.input_len = input_len
         self.output_len = output_len
-        self.gp_len = node_value.shape[0]
+        self.max_tree_len = node_value.shape[0]
 
         assert node_value.shape == (
-            self.gp_len,
-        ), f"node_value shape should be {self.gp_len}, but got {node_value.shape}"
+            self.max_tree_len,
+        ), f"node_value shape should be {self.max_tree_len}, but got {node_value.shape}"
         assert node_type.shape == (
-            self.gp_len,
-        ), f"node_type shape should be {self.gp_len}, but got {node_type.shape}"
+            self.max_tree_len,
+        ), f"node_type shape should be {self.max_tree_len}, but got {node_type.shape}"
         assert subtree_size.shape == (
-            self.gp_len,
-        ), f"subtree_size shape should be {self.gp_len}, but got {subtree_size.shape}"
+            self.max_tree_len,
+        ), f"subtree_size shape should be {self.max_tree_len}, but got {subtree_size.shape}"
 
         self.node_value = node_value
         self.node_type = node_type
         self.subtree_size = subtree_size
 
     @staticmethod
-    def random_generate(*args, **kwargs):
+    def random_generate(descriptor: GenerateDiscriptor):
         # Delayed import to avoid circular dependency with the Forest class
         from .forest import Forest
 
-        return Forest.random_generate(pop_size=1, *args, **kwargs)[0]
+        return Forest.random_generate(pop_size=1, descriptor=descriptor)[0]
 
     def forward(self, x: Tensor):
         x = check_tensor(x)
@@ -56,14 +57,14 @@ class Tree:
         batch_subtree_size = self.subtree_size.repeat(batch_size, 1)
 
         res = torch.ops.evogp.tree_evaluate(
-            batch_size,  # popsize
-            self.gp_len,  # gp_len
-            self.input_len,  # var_len
-            self.output_len,  # out_len
-            batch_node_value,  # value
-            batch_node_type,  # node_type
-            batch_subtree_size,  # subtree_size
-            x,  # variables
+            batch_size,
+            self.max_tree_len,
+            self.input_len,
+            self.output_len,
+            batch_node_value,
+            batch_node_type,
+            batch_subtree_size,
+            x,
         )
 
         if is_expand_input:
@@ -89,7 +90,7 @@ class Tree:
         res = torch.ops.evogp.tree_SR_fitness(
             1,
             batch_size,
-            self.gp_len,
+            self.max_tree_len,
             self.input_len,
             self.output_len,
             use_MSE,
