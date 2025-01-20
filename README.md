@@ -154,7 +154,7 @@ forest[int(fitness.argmax())].to_png("sr_tree.png")
 print(forest[int(fitness.argmax())].to_infix())
 ```
 <div style="text-align: center;">
-    <img src="./imgs/sr_tree.svg" alt="Visualization of the individual"  width="300" height="300">
+    <img src="./imgs/sr_tree.png" alt="Visualization of the individual"  width="300" height="300">
 </div>
 
 ```
