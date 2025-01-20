@@ -232,12 +232,21 @@ problem = Classification(dataset="iris")
 
 ### Transformation
 
-The transformation task aims to generate new features from raw data to enhance the performance of subsequent models. EvoGP provides support for sklearn datasets, including a built-in example with the Diabetes dataset, allowing users to get started quickly. For custom requirements, users can pass their own datasets using `datapoints` and `label`. During execution, EvoGP automatically generates features most linearly correlated with the `label` based on the input data. The quality of the generated features is evaluated using the Pearson correlation coefficient, which serves as the basis for fitness optimization. Lastly, users can leverage the `new_feature` interface to generate the new features. Below is an example to set up the transformation problem:
+EvoGP supports feature transformation tasks, allowing the generation of new features from raw data to improve model performance. You can create a `Problem` with your custom dataset:
 
 ```python
 from evogp.problem import Transformation
+
+problem = Transformation(datapoints=YOUR_DATA, labels=YOUR_LABELS)
+```
+
+Or use a built-in dataset like "diabetes":
+
+```python
 problem = Transformation(dataset="diabetes")
 ```
+
+During execution, EvoGP automatically generates features optimized for correlation with the target label. These new features can then be accessed through the `new_feature` interface.
 
 ------
 
