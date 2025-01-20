@@ -231,7 +231,7 @@ class Forest:
             "const_samples": const_samples,
         }
 
-    def forward(self, x: Tensor, args_check=True) -> Tensor:
+    def forward(self, x: Tensor) -> Tensor:
         """
         Evaluate the expression forest.
 
@@ -241,8 +241,12 @@ class Forest:
         Returns:
             The output values. Shape is (pop_size, output_len).
         """
-        if args_check:
-            x = self.forward_check(x)
+        x = check_tensor(x)
+
+        assert x.shape == (
+            self.pop_size,
+            self.input_len,
+        ), f"x shape should be ({self.pop_size}, {self.input_len}), but got {x.shape}"
 
         res = torch.ops.evogp_cuda.tree_evaluate(
             self.pop_size,  # popsize
@@ -257,24 +261,23 @@ class Forest:
 
         return res
 
-    def forward_check(self, x: Tensor):
+    def batch_forward(self, x: Tensor) -> Tensor:
         x = check_tensor(x)
 
-        assert x.shape == (
-            self.pop_size,
-            self.input_len,
-        ), f"x shape should be ({self.pop_size}, {self.input_len}), but got {x.shape}"
+        assert (x.dim() == 2) and (
+            x.shape[1] == self.input_len
+        ), f"x shape[1] should be {self.input_len}, but got {x.shape[1]}"
 
-        return x
-
-    def batch_forward(self, x: Tensor, args_check=True) -> Tensor:
-        if args_check:
-            x = self.batch_forward_check(x)
-        
         batch_size = x.shape[0]
-        assist_batch_node_value = self.batch_node_value.repeat_interleave(batch_size, dim=0)
-        assist_batch_node_type = self.batch_node_type.repeat_interleave(batch_size, dim=0)
-        assist_batch_subtree_size = self.batch_subtree_size.repeat_interleave(batch_size, dim=0)
+        assist_batch_node_value = self.batch_node_value.repeat_interleave(
+            batch_size, dim=0
+        )
+        assist_batch_node_type = self.batch_node_type.repeat_interleave(
+            batch_size, dim=0
+        )
+        assist_batch_subtree_size = self.batch_subtree_size.repeat_interleave(
+            batch_size, dim=0
+        )
 
         assist_x = x.repeat(self.pop_size, 1)
 
@@ -293,18 +296,7 @@ class Forest:
 
         return res
 
-    def batch_forward_check(self, x: Tensor):
-        x = check_tensor(x)
-
-        assert (x.dim() == 2) and (
-            x.shape[1] == self.input_len
-        ), f"x shape[1] should be {self.input_len}, but got {x.shape[1]}"
-
-        return x
-
-    def mutate(
-        self, replace_pos: Tensor, new_sub_forest: "Forest", args_check=True
-    ) -> "Forest":
+    def mutate(self, replace_pos: Tensor, new_sub_forest: "Forest") -> "Forest":
         """
         Mutate the current forest by replacing subtrees at specified positions
         with new subtrees from a new_sub_forest.
@@ -316,8 +308,24 @@ class Forest:
         Returns:
             A new mutated Forest object.
         """
-        if args_check:
-            replace_pos = self.mutation_check(replace_pos, new_sub_forest)
+        replace_pos = check_tensor(replace_pos)
+
+        # Validate shapes and dimensions
+        assert replace_pos.shape == (
+            self.pop_size,
+        ), f"replace_pos shape should be ({self.pop_size}, ), but got {replace_pos.shape}"
+        assert (
+            self.pop_size == new_sub_forest.pop_size
+        ), f"pop_size should be {self.pop_size}, but got {new_sub_forest.pop_size}"
+        assert (
+            self.input_len == new_sub_forest.input_len
+        ), f"input_len should be {self.input_len}, but got {new_sub_forest.input_len}"
+        assert (
+            self.output_len == new_sub_forest.output_len
+        ), f"output_len should be {self.output_len}, but got {new_sub_forest.output_len}"
+        assert (
+            self.gp_len == new_sub_forest.gp_len
+        ), f"gp_len should be {self.gp_len}, but got {new_sub_forest.gp_len}"
 
         # Perform mutation operation using CUDA
         (
@@ -345,35 +353,12 @@ class Forest:
             batch_subtree_size,
         )
 
-    def mutation_check(self, replace_pos: Tensor, new_sub_forest: "Forest"):
-        replace_pos = check_tensor(replace_pos)
-
-        # Validate shapes and dimensions
-        assert replace_pos.shape == (
-            self.pop_size,
-        ), f"replace_pos shape should be ({self.pop_size}, ), but got {replace_pos.shape}"
-        assert (
-            self.pop_size == new_sub_forest.pop_size
-        ), f"pop_size should be {self.pop_size}, but got {new_sub_forest.pop_size}"
-        assert (
-            self.input_len == new_sub_forest.input_len
-        ), f"input_len should be {self.input_len}, but got {new_sub_forest.input_len}"
-        assert (
-            self.output_len == new_sub_forest.output_len
-        ), f"output_len should be {self.output_len}, but got {new_sub_forest.output_len}"
-        assert (
-            self.gp_len == new_sub_forest.gp_len
-        ), f"gp_len should be {self.gp_len}, but got {new_sub_forest.gp_len}"
-
-        return replace_pos
-
     def crossover(
         self,
         left_indices: Tensor,
         right_indices: Tensor,
         left_pos: Tensor,
         right_pos: Tensor,
-        args_check=True,
     ) -> "Forest":
         """
         Perform crossover operation.
@@ -387,10 +372,25 @@ class Forest:
         Returns:
             Forest: a new Forest object with the crossovered trees
         """
-        if args_check:
-            left_indices, right_indices, left_pos, right_pos = self.crossover_check(
-                left_indices, right_indices, left_pos, right_pos
-            )
+        left_indices = check_tensor(left_indices)
+        right_indices = check_tensor(right_indices)
+        left_pos = check_tensor(left_pos)
+        right_pos = check_tensor(right_pos)
+
+        res_forest_size = left_indices.shape[0]
+
+        assert left_indices.shape == (
+            res_forest_size,
+        ), f"left_indices shape should be ({res_forest_size}, ), but got {left_indices.shape}"
+        assert right_indices.shape == (
+            res_forest_size,
+        ), f"right_indices shape should be ({res_forest_size}, ), but got {right_indices.shape}"
+        assert left_pos.shape == (
+            res_forest_size,
+        ), f"left_pos shape should be ({res_forest_size}, ), but got {left_pos.shape}"
+        assert right_pos.shape == (
+            res_forest_size,
+        ), f"right_pos shape should be ({res_forest_size}, ), but got {right_pos.shape}"
 
         res_forest_size = left_indices.shape[0]
 
@@ -419,37 +419,12 @@ class Forest:
             batch_subtree_size,
         )
 
-    def crossover_check(self, left_indices, right_indices, left_pos, right_pos):
-        left_indices = check_tensor(left_indices)
-        right_indices = check_tensor(right_indices)
-        left_pos = check_tensor(left_pos)
-        right_pos = check_tensor(right_pos)
-
-        res_forest_size = left_indices.shape[0]
-
-        assert left_indices.shape == (
-            res_forest_size,
-        ), f"left_indices shape should be ({res_forest_size}, ), but got {left_indices.shape}"
-        assert right_indices.shape == (
-            res_forest_size,
-        ), f"right_indices shape should be ({res_forest_size}, ), but got {right_indices.shape}"
-        assert left_pos.shape == (
-            res_forest_size,
-        ), f"left_pos shape should be ({res_forest_size}, ), but got {left_pos.shape}"
-        assert right_pos.shape == (
-            res_forest_size,
-        ), f"right_pos shape should be ({res_forest_size}, ), but got {right_pos.shape}"
-
-        return left_indices, right_indices, left_pos, right_pos
-
     def SR_fitness(
         self,
         inputs: Tensor,
         labels: Tensor,
         use_MSE: bool = True,
-        execute_mode: str = "normal",
-        execute_code: int = 0,
-        args_check: bool = True,
+        execute_mode: str = "auto",
     ) -> Tensor:
         """
         Calculate the fitness of the current population using the SR metric.
@@ -462,12 +437,37 @@ class Forest:
         Returns:
             Tensor: a tensor of shape (pop_size,) containing the fitness values
         """
-        if args_check:
-            inputs, labels, execute_code = self.SR_fitness_check(
-                inputs, labels, use_MSE, execute_mode
-            )
+        inputs = check_tensor(inputs)
+        labels = check_tensor(labels)
 
         batch_size = inputs.shape[0]
+        assert inputs.shape == (
+            batch_size,
+            self.input_len,
+        ), f"inputs shape should be ({batch_size}, {self.input_len}), but got {inputs.shape}"
+
+        assert labels.shape == (
+            batch_size,
+            self.output_len,
+        ), f"outputs shape should be ({batch_size}, {self.output_len}), but got {labels.shape}"
+
+        assert execute_mode in [
+            "hybrid parallel",
+            "data parallel",
+            "tree parallel",
+            "auto",
+        ], f"execute_mode should be one of ['hybrid parallel', 'data parallel', 'tree parallel', 'auto'], but got {execute_mode}"
+
+        if execute_mode == "hybrid parallel":
+            execute_code = 3
+        elif execute_mode == "data parallel":
+            execute_code = 1
+        elif execute_mode == "tree parallel":
+            execute_code = 2
+        elif execute_mode == "auto":
+            execute_code = 4
+        batch_size = inputs.shape[0]
+
         # Perform SR fitness computation using CUDA
         res = torch.ops.evogp_cuda.tree_SR_fitness(
             self.pop_size,
@@ -485,167 +485,6 @@ class Forest:
         )
 
         return res
-
-    def SR_fitness_check(
-        self,
-        inputs: Tensor,
-        labels: Tensor,
-        use_MSE: bool = True,
-        execute_mode: str = "auto",
-    ):
-        inputs = check_tensor(inputs)
-        labels = check_tensor(labels)
-
-        batch_size = inputs.shape[0]
-        assert inputs.shape == (
-            batch_size,
-            self.input_len,
-        ), f"inputs shape should be ({batch_size}, {self.input_len}), but got {inputs.shape}"
-
-        assert labels.shape == (
-            batch_size,
-            self.output_len,
-        ), f"outputs shape should be ({batch_size}, {self.output_len}), but got {labels.shape}"
-
-        assert execute_mode in [
-            "normal",
-            "tree_loop",
-            "data_loop",
-            "advanced",
-        ], f"execute_mode should be 'normal', 'tree_loop' or 'data_loop', but got {execute_mode}"
-        if execute_mode == "normal":
-            execute_code = 0
-        elif execute_mode == "tree_loop":
-            execute_code = 1
-        elif execute_mode == "data_loop":
-            execute_code = 2
-        elif execute_mode == "advanced":
-            execute_code = 3
-        elif execute_mode == "auto":
-            execute_code = 4
-
-        return inputs, labels, execute_code
-
-    @classmethod
-    def set_debug_mode(cls, debug_mode: bool = True):
-        assert isinstance(debug_mode, bool)
-        if debug_mode:
-            print("Debug mode on Forest is enabled.")
-        else:
-            print("Debug mode on Forest is disabled.")
-
-        cls.__debug_mode = debug_mode
-
-    @classmethod
-    def set_timmer_mode(cls, timmer_mode: bool = True):
-        assert isinstance(timmer_mode, bool)
-        if timmer_mode:
-            print("Timmer mode on Forest is enabled.")
-        else:
-            print("Timmer mode on Forest is disabled.")
-
-        cls.__timmer_mode = timmer_mode
-
-    def __using_debug_mode(self):
-        def debug_wrapper(func):
-            def wrapper(*args, **kwargs):
-
-                # check each tree in forest valid
-                # for tree in self:
-                #     tree.assert_valid()
-
-                saved_args = []
-                saved_kwargs = {}
-                for arg in args:
-                    if isinstance(arg, Tensor):
-                        saved_args.append(arg.cpu().numpy())
-                    else:
-                        saved_args.append(arg)
-
-                for key, value in kwargs.items():
-                    if isinstance(value, Tensor):
-                        saved_kwargs[key] = value.cpu().numpy()
-
-                from datetime import datetime
-
-                kernel_info = {
-                    "func_name": func.__name__,
-                    "execute_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                    "forest": self,
-                    "status": "error",
-                    "args": saved_args,
-                    "kwargs": saved_kwargs,
-                }
-                np.save("kernel_info", kernel_info)
-                # synchronize after
-                torch.cuda.synchronize()
-                res = func(*args, **kwargs)
-
-                kernel_info["status"] = "success"
-                np.save("kernel_info", kernel_info)
-
-                return res
-
-            return wrapper
-
-        if type(self).random_generate.__name__ == "random_generate":
-            type(self).random_generate = debug_wrapper(type(self).random_generate)
-        self.forward = debug_wrapper(self.forward)
-        self.crossover = debug_wrapper(self.crossover)
-        self.mutate = debug_wrapper(self.mutate)
-        self.SR_fitness = debug_wrapper(self.SR_fitness)
-
-    def __using_timmer_mode(self):
-        def timmer_wrapper(func):
-            def wrapper(*args, **kwargs):
-                # save args that is string or bool
-                saved_args = []
-                saved_kwargs = {}
-                for arg in args:
-                    if (
-                        isinstance(arg, bool)
-                        or isinstance(arg, str)
-                        or isinstance(arg, int)
-                    ):
-                        saved_args.append(arg)
-
-                for key, value in kwargs.items():
-                    if (
-                        isinstance(value, bool)
-                        or isinstance(value, str)
-                        or isinstance(value, int)
-                    ):
-                        saved_kwargs[key] = value
-
-                tic = time.time()
-                res = func(*args, **kwargs)
-                torch.cuda.synchronize()
-                cost_time = time.time() - tic
-                info = {
-                    "func_name": func.__name__,
-                    "cost_time": cost_time,
-                    "args": saved_args,
-                    "kwargs": saved_kwargs,
-                }
-                self.__shared_time_record.append(info)
-                return res
-
-            return wrapper
-
-        if type(self).random_generate.__name__ == "random_generate":  # not been wrapped
-            type(self).random_generate = timmer_wrapper(type(self).random_generate)
-        self.forward = timmer_wrapper(self.forward)
-        self.crossover = timmer_wrapper(self.crossover)
-        self.mutate = timmer_wrapper(self.mutate)
-        self.SR_fitness = timmer_wrapper(self.SR_fitness)
-
-    @classmethod
-    def clear_timer_record(cls):
-        cls.__shared_time_record = []
-
-    @classmethod
-    def get_timer_record(cls):
-        return cls.__shared_time_record
 
     def __getitem__(self, index):
         if isinstance(index, int):

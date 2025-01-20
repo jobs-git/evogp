@@ -79,6 +79,8 @@ setup(
         "torch",
         "numpy",
         "scikit_learn",
+        "networkx",
+        "pygraphviz"
     ],
     include_package_data=True,
     python_requires=">=3.12",
