@@ -63,3 +63,11 @@ class SymbolicRegression(BaseProblem):
             use_MSE,
             execute_mode,
         )
+
+    @property
+    def problem_dim(self):
+        return self.datapoints.shape[1]
+
+    @property
+    def solution_dim(self):
+        return self.labels.shape[1]

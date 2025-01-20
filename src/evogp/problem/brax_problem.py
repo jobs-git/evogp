@@ -1,21 +1,26 @@
-import os
-
-os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = ".01"
-
-import jax, jax.numpy as jnp
-from brax import envs
 import torch
 from typing import Callable
 from evogp.tree import Forest
 
 from . import BaseProblem
 
-def to_jax_array(x: torch.Tensor) -> jax.Array:
+
+def to_jax_array(x: torch.Tensor):
     return jax.dlpack.from_dlpack(x.detach())
 
 
-def from_jax_array(x: jax.Array) -> torch.Tensor:
+def from_jax_array(x) -> torch.Tensor:
     return torch.utils.dlpack.from_dlpack(x)
+
+
+def import_jax_based_package(jax_pre_allocate_memory):
+    import os
+
+    os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = f"{jax_pre_allocate_memory}"
+
+    global jax, brax, jnp
+    import jax, jax.numpy as jnp
+    import brax
 
 
 class BraxProblem(BaseProblem):
@@ -27,11 +32,14 @@ class BraxProblem(BaseProblem):
         pop_size: int | None = None,
         backend: str | None = None,
         output_transform: Callable = torch.tanh,
+        jax_pre_allocate_memory=0.5,
     ):
-        self.env: envs.Env = (
-            envs.get_environment(env_name=env_name)
+        import_jax_based_package(jax_pre_allocate_memory)
+
+        self.env: brax.envs.Env = (
+            brax.envs.get_environment(env_name=env_name)
             if backend is None
-            else envs.get_environment(env_name=env_name, backend=backend)
+            else brax.envs.get_environment(env_name=env_name, backend=backend)
         )
 
         self.batch_reset = jax.jit(jax.vmap(self.env.reset))
@@ -85,9 +93,9 @@ class BraxProblem(BaseProblem):
         return from_jax_array(total_reward)
 
     @property
-    def obs_dim(self):
+    def problem_dim(self):
         return self.env.observation_size
 
     @property
-    def action_dim(self):
+    def solution_dim(self):
         return self.env.action_size

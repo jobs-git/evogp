@@ -360,7 +360,7 @@ class Forest:
                 self.batch_subtree_size[index],
             )
         else:
-            raise NotImplementedError
+            raise Exception("Do not support index type {}".format(type(index)))
 
     def __setitem__(self, index, value):
         if isinstance(index, int):

@@ -8,19 +8,16 @@ class GeneticProgramming:
 
     def __init__(
         self,
+        initial_forest: Forest,
         crossover: BaseCrossover,
         mutation: BaseMutation,
         selection: BaseSelection,
     ):
-        self.forest = None
-        self.pop_size = -1
+        self.forest = initial_forest
+        self.pop_size = initial_forest.pop_size
         self.crossover = crossover
         self.mutation = mutation
         self.selection = selection
-
-    def initialize(self, forest: Forest):
-        self.forest = forest
-        self.pop_size = forest.pop_size
 
     def step(self, fitness: torch.Tensor):
         assert self.forest is not None, "forest is not initialized"

@@ -141,9 +141,13 @@ class Tree:
                 stack.append(f"{FUNCS_DISPLAY[int(v)]}({stack.pop()})")
             elif t == NType.BFUNC:
                 if int(v) in [5, 6, 7]:
-                    stack.append(f"{FUNCS_DISPLAY[int(v)]}({stack.pop()},{stack.pop()})")
+                    stack.append(
+                        f"{FUNCS_DISPLAY[int(v)]}({stack.pop()},{stack.pop()})"
+                    )
                 else:
-                    stack.append(f"({stack.pop()} {FUNCS_DISPLAY[int(v)]} {stack.pop()})")
+                    stack.append(
+                        f"({stack.pop()} {FUNCS_DISPLAY[int(v)]} {stack.pop()})"
+                    )
             elif t == NType.TFUNC:
                 stack.append(
                     f"{FUNCS_DISPLAY[int(v)]}({stack.pop()},{stack.pop()},{stack.pop()})"
