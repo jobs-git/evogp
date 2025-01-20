@@ -39,7 +39,7 @@ class CustomInstallCommand(install):
 setup(
     name="evogp",
     version="0.1.0",
-    author="Lishuang Wang, Zhihong Wu, Kebin Sun",
+    author="Zhihong Wu, Lishuang Wang, Kebin Sun",
     author_email="zhihong2718@gmai.com",
     description="Evolutionary Genetic Programming with CUDA-based GPU acceleration.",
     long_description=long_description,
@@ -78,6 +78,7 @@ setup(
     install_requires=[
         "torch",
         "numpy",
+        "scikit_learn",
     ],
     include_package_data=True,
     python_requires=">=3.12",

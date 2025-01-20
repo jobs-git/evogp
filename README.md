@@ -45,22 +45,38 @@ EvoGP is a GPU-accelerated library for tree-based genetic programming (TGP), des
 
 ## Installation
 
-1. Install the correct version of [PyTorch](https://pytorch.org/). We recommend `torch >= 2.5.1`.
+To install EvoGP, please follow the steps below:
 
-For nvidia gpus, you may use:
+### 1. Install NVIDIA CUDA Toolkit  
+Ensure you have the NVIDIA CUDA Toolkit installed, including `nvcc`. You can download it from [NVIDIA's official website](https://developer.nvidia.com/cuda-downloads).  
+- Check CUDA version:  
+   ```bash
+   nvcc --version
+   ```
 
-```
-pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
-```
+### 2. Install a C++ Compiler  
+Ensure you have a compatible C++ compiler installed:  
+- **Linux/macOS:** Install GCC (9.x or later is recommended).  
+   ```bash
+   sudo apt install build-essential  # On Ubuntu
+   gcc --version
+   ```
+- **Windows:** Install Visual Studio with the C++ workload.  
 
-For details of installing PyTorch, please check https://pytorch.org.
+### 3. Install PyTorch  
+Install the version of PyTorch that matches your installed CUDA version.  
+For example, if you are using CUDA 11.8:  
+   ```bash
+   pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+   ```
+You can find more details on the [PyTorch installation page](https://pytorch.org/get-started/locally/).
 
-
-2. Install `evogp` from the GitHub source code:
-
-```
+### 4. Install EvoGP  
+Finally, install EvoGP:  
+```bash
 pip install git+https://github.com/EMI-Group/evogp.git
 ```
+
 
 ## Basic API Usage
 
