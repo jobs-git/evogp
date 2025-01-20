@@ -104,7 +104,7 @@ struct GPNode
 
 struct OutNodeValue
 {
-	int16_t function, outIndex;
+	int16_t function, outIndex; // lower 16 bits: function, upper 16 bits: out index
 
 	__host__ __device__ inline operator float() const
 	{
