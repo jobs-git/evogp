@@ -49,7 +49,7 @@ To install EvoGP, please follow the steps below:
 
 ### 1. Install NVIDIA CUDA Toolkit  
 Ensure you have the NVIDIA CUDA Toolkit installed, including `nvcc`. You can download it from [NVIDIA's official website](https://developer.nvidia.com/cuda-downloads).  
-- Check CUDA version:  
+- Check your CUDA version:  
    ```bash
    nvcc --version
    ```
@@ -61,14 +61,16 @@ Ensure you have a compatible C++ compiler installed:
    sudo apt install build-essential  # On Ubuntu
    gcc --version
    ```
-- **Windows:** Install Visual Studio with the C++ workload.  
+- **Windows:** Install the **Visual C++ Build Tools**. You can download it from [this](https://visualstudio.microsoft.com/visual-cpp-build-tools/). During installation, ensure that the **C++ workload** is selected. 
 
 ### 3. Install PyTorch  
-Install the version of PyTorch that matches your installed CUDA version.  
+Install the version of PyTorch that matches your installed CUDA Toolkit version.  
 For example, if you are using CUDA 11.8:  
    ```bash
    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
    ```
+⚠️ **Important:** Make sure to select the PyTorch version compatible with the **CUDA Toolkit** version (`nvcc -V`), not the Nvidia driver version.  
+
 You can find more details on the [PyTorch installation page](https://pytorch.org/get-started/locally/).
 
 ### 4. Install EvoGP  
@@ -76,7 +78,6 @@ Finally, install EvoGP:
 ```bash
 pip install git+https://github.com/EMI-Group/evogp.git
 ```
-
 
 ## Basic API Usage
 
