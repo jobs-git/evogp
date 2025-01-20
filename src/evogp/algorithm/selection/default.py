@@ -6,6 +6,11 @@ from .base import BaseSelection
 
 
 class DefaultSelection(BaseSelection):
+    """
+    DefaultSelection is the default selection strategy for the TGP algorithm.
+
+    This strategy first preserves a certain proportion of elite individuals (those ranked at the top of the population by fitness). Then, individuals ranked at the bottom of the population are eliminated based on the survival rate. The strategy allows flexibility in defining the number or proportion of elite individuals to retain.
+    """
 
     def __init__(
         self,
@@ -13,6 +18,12 @@ class DefaultSelection(BaseSelection):
         elite_cnt: Optional[int] = None,
         elite_rate: Optional[float] = None,
     ):
+        """
+        Args:
+            survival_rate (float): The survival rate, determining the proportion of individuals that survive (between 0 and 1).
+            elite_cnt (Optional[int]): The exact number of elite individuals to retain (if not None).
+            elite_rate (Optional[float]): The proportion of elite individuals to retain (if not None).
+        """
         super().__init__()
         assert 0 <= survival_rate <= 1, "survival_rate should be in [0, 1]"
         assert (

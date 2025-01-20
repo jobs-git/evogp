@@ -6,6 +6,11 @@ from .base import BaseSelection
 
 
 class TruncationSelection(BaseSelection):
+    """
+    RandomSelection implements a selection strategy where individuals are selected randomly from the population.
+
+    All individuals are sorted by their fitness, and a certain proportion of low-fitness individuals are excluded. The next generation is then created by randomly sampling from the remaining individuals with replacement and equal probability.
+    """
 
     def __init__(
         self,
