@@ -110,6 +110,33 @@ FUNCS_NAMES = [
     "sqrt",  # 23
 ]
 
+FUNCS_DISPLAY = [
+    "if",  # 0
+    "+",  # 1
+    "−",  # 2
+    "*",  # 3
+    "/",  # 4
+    "pow",  # 5
+    "max",  # 6
+    "min",  # 7
+    "<",  # 8
+    ">",  # 9
+    "<=",  # 10
+    ">=",  # 11
+    "sin",  # 12
+    "cos",  # 13
+    "tan",  # 14
+    "sinh",  # 15
+    "cosh",  # 16
+    "tanh",  # 17
+    "log",  # 18
+    "exp",  # 19
+    "inv",  # 20
+    "neg",  # 21
+    "abs",  # 22
+    "sqrt",  # 23
+]
+
 
 def dict2prob(prob_dict):
     # Probability Dictionary to Distribution Function

@@ -7,6 +7,18 @@ from functools import partial
 
 
 class TournamentSelection(BaseSelection):
+    """
+    TournamentSelection implements a selection strategy where individuals compete in tournaments to be selected.
+
+    A specified number of individuals are randomly selected from the population to form a tournament. 
+    The winner of each tournament is selected based on a probability that favors the best-performing individual.
+
+    Two sampling modes are available:
+        - With replacement: Individuals can be selected multiple times for tournaments.
+        - Without replacement: Individuals with fewer prior selections are favored in tournament formation.
+
+    The selection probability for the best individual in each tournament is controlled by the `best_probability` parameter.
+    """
 
     def __init__(
         self,
@@ -18,6 +30,16 @@ class TournamentSelection(BaseSelection):
         survivor_cnt: Optional[int] = None,
         elite_cnt: Optional[int] = None,
     ):
+        """
+        Args:
+            tournament_size (int): The number of individuals in each tournament.
+            best_probability (float): The probability of selecting the best individual from the tournament. Defaults to 1 (always select the best).
+            replace (bool): Whether to allow replacement when selecting individuals for tournaments. Defaults to True (with replacement).
+            survivor_rate (float): The proportion of individuals to retain in the next generation, based on their fitness. Should be between 0 and 1. Defaults to 0.5.
+            elite_rate (float): The proportion of elite individuals to retain based on fitness. Should be between 0 and 1. Defaults to 0.
+            survivor_cnt (Optional[int]): The exact number of individuals to retain as survivors (if provided). Defaults to None.
+            elite_cnt (Optional[int]): The exact number of elite individuals to retain (if provided). Defaults to None.
+        """
         super().__init__()
         assert 0 <= survivor_rate <= 1, "survival_rate should be in [0, 1]"
         assert 0 <= elite_rate <= 1, "elite_rate should be in [0, 1]"
@@ -28,6 +50,7 @@ class TournamentSelection(BaseSelection):
         self.survivor_cnt = survivor_cnt
         self.elite_rate = elite_rate
         self.elite_cnt = elite_cnt
+
 
     def __call__(self, forest: Forest, fitness: torch.Tensor):
         @partial(torch.vmap, randomness="different")

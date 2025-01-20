@@ -6,6 +6,9 @@ from .base import BaseSelection
 
 
 class RouletteSelection(BaseSelection):
+    """
+    Each individual is selected with a probability proportional to its fitness, ensuring that individuals with higher fitness are more likely to be chosen for the next generation.
+    """
 
     def __init__(
         self,
@@ -14,6 +17,13 @@ class RouletteSelection(BaseSelection):
         survivor_cnt: Optional[int] = None,
         elite_cnt: Optional[int] = None,
     ):
+        """
+        Args:
+            survivor_rate (float): The proportion of individuals to retain in the next generation. Should be in the range [0, 1].
+            elite_rate (float): The proportion of elite individuals to retain based on fitness. Should be in the range [0, 1].
+            survivor_cnt (Optional[int]): The exact number of individuals to retain as survivors (if not None).
+            elite_cnt (Optional[int]): The exact number of elite individuals to retain (if not None).
+        """
         super().__init__()
         assert 0 <= survivor_rate <= 1, "survival_rate should be in [0, 1]"
         assert 0 <= elite_rate <= 1, "elite_rate should be in [0, 1]"

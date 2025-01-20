@@ -138,15 +138,15 @@ class Tree:
             elif t == NType.CONST:
                 stack.append(f"{v:.2f}")
             elif t == NType.UFUNC:
-                stack.append(f"{FUNCS_NAMES[int(v)]}({stack.pop()})")
+                stack.append(f"{FUNCS_DISPLAY[int(v)]}({stack.pop()})")
             elif t == NType.BFUNC:
                 if int(v) in [5, 6, 7]:
-                    stack.append(f"{FUNCS_NAMES[int(v)]}({stack.pop()},{stack.pop()})")
+                    stack.append(f"{FUNCS_DISPLAY[int(v)]}({stack.pop()},{stack.pop()})")
                 else:
-                    stack.append(f"({stack.pop()}{FUNCS_NAMES[int(v)]}{stack.pop()})")
+                    stack.append(f"({stack.pop()} {FUNCS_DISPLAY[int(v)]} {stack.pop()})")
             elif t == NType.TFUNC:
                 stack.append(
-                    f"{FUNCS_NAMES[int(v)]}({stack.pop()},{stack.pop()},{stack.pop()})"
+                    f"{FUNCS_DISPLAY[int(v)]}({stack.pop()},{stack.pop()},{stack.pop()})"
                 )
         return stack.pop()
 
@@ -170,21 +170,21 @@ class Tree:
             child_remain = 0
         elif node_type == NType.UFUNC:
             if output_index == -1:
-                node_label = FUNCS_NAMES[int(node_val)]
+                node_label = FUNCS_DISPLAY[int(node_val)]
             else:
-                node_label = FUNCS_NAMES[node_val.view(torch.int32) & 0xFF]
+                node_label = FUNCS_DISPLAY[node_val.view(torch.int32) & 0xFF]
             child_remain = 1
         elif node_type == NType.BFUNC:
             if output_index == -1:
-                node_label = FUNCS_NAMES[int(node_val)]
+                node_label = FUNCS_DISPLAY[int(node_val)]
             else:
-                node_label = FUNCS_NAMES[node_val.view(torch.int32) & 0xFF]
+                node_label = FUNCS_DISPLAY[node_val.view(torch.int32) & 0xFF]
             child_remain = 2
         elif node_type == NType.TFUNC:
             if output_index == -1:
-                node_label = FUNCS_NAMES[int(node_val)]
+                node_label = FUNCS_DISPLAY[int(node_val)]
             else:
-                node_label = FUNCS_NAMES[node_val.view(torch.int32) & 0xFF]
+                node_label = FUNCS_DISPLAY[node_val.view(torch.int32) & 0xFF]
             child_remain = 3
 
         if output_index == -1:

@@ -7,10 +7,18 @@ from .base import BaseSelection
 
 class RankSelection(BaseSelection):
     """
-    Args:
-      selection_pressure: the range is [0, 1].
-        0 means no selection pressure.
-        1 means high selection pressure.
+    RankSelection implements a selection strategy based on fitness rank and selection pressure.
+
+    Individuals are sorted by fitness, and their selection probabilities are calculated using the following formula:
+    
+    $$ P(R_i) = \frac{1}{n} \left( 1 + sp \left(1 - \frac{2i}{n-1}\right) \right) \quad \text{for } 0 \leq i \leq n-1, \quad 0 \leq sp \leq 1 $$
+
+    where:
+        - `n` is the population size,
+        - `i` is the individual's rank,
+        - `sp` represents the selection pressure (higher values correspond to greater pressure).
+    
+    Individuals are then selected with replacement based on these probabilities.
     """
 
     def __init__(
@@ -21,9 +29,19 @@ class RankSelection(BaseSelection):
         survivor_cnt: Optional[int] = None,
         elite_cnt: Optional[int] = None,
     ):
+        """
+        Args:
+            selection_pressure (float): The selection pressure, a value between 0 and 1. 
+                - 0 means no selection pressure.
+                - 1 means high selection pressure.
+            survivor_rate (float): The proportion of individuals that survive based on their rank and selection probability.
+            elite_rate (float): The proportion of elite individuals to retain based on fitness.
+            survivor_cnt (Optional[int]): The exact number of survivors to retain (if not None).
+            elite_cnt (Optional[int]): The exact number of elite individuals to retain (if not None).
+        """
         super().__init__()
         assert 0 <= selection_pressure <= 1, "selection_pressure should be in [0, 1]"
-        assert 0 <= survivor_rate <= 1, "survival_rate should be in [0, 1]"
+        assert 0 <= survivor_rate <= 1, "survivor_rate should be in [0, 1]"
         assert 0 <= elite_rate <= 1, "elite_rate should be in [0, 1]"
         self.sp = selection_pressure
         self.survivor_rate = survivor_rate
