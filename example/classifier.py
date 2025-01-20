@@ -3,8 +3,8 @@ import torch
 torch.random.manual_seed(0)
 torch.cuda.manual_seed(0)
 
-import time
-from evogp.tree import Forest
+from evogp.pipeline import StandardPipeline
+from evogp.tree import Forest, GenerateDiscriptor
 from evogp.algorithm import (
     GeneticProgramming,
     DefaultSelection,
@@ -14,62 +14,36 @@ from evogp.algorithm import (
 from evogp.problem import Classification
 
 
-def print_color(text):
-    print(f"\033[33m{text}\033[0m")
+dataset_name = ["iris", "wine", "breast_cancer", "digits"]
 
 
-classification_problem = {
-    "iris": {"input_len": 4, "output_len": 3, "sample_cnt": 150},
-    "wine": {"input_len": 13, "output_len": 3, "sample_cnt": 178},
-    "breast_cancer": {"input_len": 30, "output_len": 2, "sample_cnt": 569},
-    "digits": {"input_len": 64, "output_len": 10, "sample_cnt": 1797},
-}
-
-name = list(classification_problem.keys())[2]
 multi_output = True
-print_color(f"Problem: {name}, multi_output: {multi_output}")
 
-problem = Classification(multi_output, dataset=name)
+problem = Classification(multi_output, dataset="iris")
 
-generate_configs = Forest.random_generate_check(
-    pop_size=1,
-    gp_len=128,
-    input_len=classification_problem[name]["input_len"],
-    output_len=classification_problem[name]["output_len"] if multi_output else 1,
-    const_prob=0.5,
-    out_prob=0.5,
-    func_prob={"+": 0.20, "-": 0.20, "*": 0.20, "/": 0.20, "pow": 0.20},
-    layer_leaf_prob=0.2,
-    const_range=(-5, 5),
-    sample_cnt=8,
+descriptor = GenerateDiscriptor(
+    max_tree_len=128,
+    input_len=problem.problem_dim,
+    output_len=problem.solution_dim,
+    using_funcs=["+", "-", "*", "/"],
     max_layer_cnt=5,
+    const_samples=[-1, 0, 1],
 )
 
+
 algorithm = GeneticProgramming(
+    initial_forest=Forest.random_generate(pop_size=1000, descriptor=descriptor),
     crossover=DefaultCrossover(),
-    mutation=DefaultMutation(mutation_rate=0.2, generate_configs=generate_configs),
+    mutation=DefaultMutation(
+        mutation_rate=0.2, descriptor=descriptor.update(max_layer_cnt=3)
+    ),
     selection=DefaultSelection(survival_rate=0.3, elite_rate=0.01),
 )
 
-# initialize the forest
-forest = Forest.random_generate(
-    pop_size=int(5000),
-    gp_len=128,
-    input_len=classification_problem[name]["input_len"],
-    output_len=classification_problem[name]["output_len"] if multi_output else 1,
-    **generate_configs,
+pipeline = StandardPipeline(
+    algorithm,
+    problem,
+    generation_limit=100,
 )
 
-algorithm.initialize(forest)
-fitness = problem.evaluate(forest)
-
-for i in range(100):
-    tic = time.time()
-    forest = algorithm.step(fitness)
-    fitness = problem.evaluate(forest)
-    torch.cuda.synchronize()
-    toc = time.time()
-    print(f"step: {i}, max_fitness: {fitness.max()}")
-    # print(
-    #     f"step: {i}, max_fitness: {fitness.max()}, mean_fitness: {fitness.mean()}, time: {toc - tic}"
-    # )
+pipeline.run()

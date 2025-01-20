@@ -20,7 +20,7 @@ def import_jax_based_package(jax_pre_allocate_memory):
 
     global jax, brax, jnp
     import jax, jax.numpy as jnp
-    import brax
+    import brax.envs
 
 
 class BraxProblem(BaseProblem):

@@ -11,14 +11,14 @@ class GenerateDiscriptor:
         max_tree_len: int,
         input_len: int,
         output_len: int,
-        const_prob: float,
-        out_prob: float = 0.0,
+        const_prob: float = 0.5,
+        out_prob: float = 0.5,
         depth2leaf_probs: Optional[Tensor] = None,
         roulette_funcs: Optional[Tensor] = None,
-        const_samples: Optional[Tensor] = None,
+        const_samples: Optional[Union[list, Tensor]] = None,
         using_funcs: Optional[Union[dict, list]] = None,
         max_layer_cnt: Optional[int] = None,
-        layer_leaf_prob: Optional[float] = None,
+        layer_leaf_prob: Optional[float] = 0.2,
         const_range: Optional[Tuple[float, float]] = None,
         sample_cnt: Optional[int] = None,
     ):
@@ -93,6 +93,11 @@ class GenerateDiscriptor:
                 torch.rand(sample_cnt, device="cuda")
                 * (const_range[1] - const_range[0])
                 + const_range[0]
+            )
+
+        if isinstance(const_samples, list):
+            const_samples = torch.tensor(
+                const_samples, dtype=torch.float32, device="cuda", requires_grad=False
             )
 
         check_tensor(depth2leaf_probs)

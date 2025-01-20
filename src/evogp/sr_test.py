@@ -3,7 +3,6 @@ import torch
 torch.random.manual_seed(0)
 torch.cuda.manual_seed(0)
 
-import time
 from evogp.pipeline import StandardPipeline
 from evogp.tree import Forest, GenerateDiscriptor
 from evogp.algorithm import (
@@ -39,7 +38,7 @@ descriptor = GenerateDiscriptor(
 
 
 algorithm = GeneticProgramming(
-    initial_forest=Forest.random_generate(pop_size=int(1000), descriptor=descriptor),
+    initial_forest=Forest.random_generate(pop_size=1000, descriptor=descriptor),
     crossover=DefaultCrossover(),
     mutation=DefaultMutation(
         mutation_rate=0.2, descriptor=descriptor.update(max_layer_cnt=3)

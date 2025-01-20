@@ -11,6 +11,7 @@ from evogp.algorithm import (
     DefaultMutation,
     DefaultCrossover,
 )
+from evogp.tree import GenerateDiscriptor
 from evogp.problem import Transformation
 
 
@@ -26,37 +27,25 @@ print_color(f"Problem: {name}")
 
 problem = Transformation(dataset=name)
 
-generate_configs = Forest.random_generate_check(
-    pop_size=1,
-    gp_len=128,
+descriptor = GenerateDiscriptor(
+    max_tree_len=128,
     input_len=transformation_problem[name]["input_len"],
     output_len=1,
-    const_prob=0.5,
-    out_prob=0.5,
-    func_prob={"+": 0.20, "-": 0.20, "*": 0.20, "/": 0.20, "pow": 0.20},
-    layer_leaf_prob=0.2,
-    const_range=(-5, 5),
-    sample_cnt=8,
+    using_funcs=["+", "-", "*", "/"],
     max_layer_cnt=5,
+    const_samples=[-1, 0, 1],
 )
 
 algorithm = GeneticProgramming(
+    initial_forest=Forest.random_generate(pop_size=1000, descriptor=descriptor),
     crossover=DefaultCrossover(),
-    mutation=DefaultMutation(mutation_rate=0.2, generate_configs=generate_configs),
+    mutation=DefaultMutation(
+        mutation_rate=0.2, descriptor=descriptor.update(max_layer_cnt=3)
+    ),
     selection=DefaultSelection(survival_rate=0.3, elite_rate=0.01),
 )
 
-# initialize the forest
-forest = Forest.random_generate(
-    pop_size=int(5000),
-    gp_len=128,
-    input_len=transformation_problem[name]["input_len"],
-    output_len=1,
-    **generate_configs,
-)
-
-algorithm.initialize(forest)
-fitness = problem.evaluate(forest)
+fitness = problem.evaluate(algorithm.forest)
 
 
 from sklearn.datasets import load_diabetes
