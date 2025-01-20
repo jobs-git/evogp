@@ -56,7 +56,7 @@ fitness = problem.evaluate(forest)
 
 for i in range(50):
     tic = time.time()
-    forest = algorithm.step(fitness, args_check=False)
+    forest = algorithm.step(fitness)
     fitness = problem.evaluate(forest)
     torch.cuda.synchronize()
     toc = time.time()

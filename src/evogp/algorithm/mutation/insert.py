@@ -17,7 +17,7 @@ class InsertMutation(BaseMutation):
         self.mutation_rate = mutation_rate
         self.generate_configs = generate_configs
 
-    def __call__(self, forest: Forest, args_check: bool = True):
+    def __call__(self, forest: Forest):
         # determine which trees need to mutate
         mutate_indices = torch.rand(forest.pop_size) < self.mutation_rate
 
@@ -42,7 +42,6 @@ class InsertMutation(BaseMutation):
             input_len=forest_to_mutate.input_len,
             output_len=forest_to_mutate.output_len,
             **self.generate_configs,
-            args_check=args_check,
         )
         newtrees_positions = randint(
             size=(newtrees.pop_size,),
@@ -52,11 +51,11 @@ class InsertMutation(BaseMutation):
         )
 
         # insert the subtrees to newtrees
-        newtrees = newtrees.mutate(newtrees_positions, subtrees, args_check=args_check)
+        newtrees = newtrees.mutate(newtrees_positions, subtrees)
 
         # insert the newtrees to forest
         forest[mutate_indices] = forest_to_mutate.mutate(
-            mutate_positions.to(torch.int32), newtrees, args_check=args_check
+            mutate_positions.to(torch.int32), newtrees
         )
 
         return forest

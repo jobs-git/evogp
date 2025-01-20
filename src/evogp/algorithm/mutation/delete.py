@@ -17,7 +17,7 @@ class DeleteMutation(BaseMutation):
         self.mutation_rate = mutation_rate
         self.generate_configs = generate_configs
 
-    def __call__(self, forest: Forest, args_check: bool = True):
+    def __call__(self, forest: Forest):
         # determine which trees need to mutate
         mutate_indices = (
             torch.rand(forest.pop_size, device="cuda") < self.mutation_rate
@@ -65,7 +65,7 @@ class DeleteMutation(BaseMutation):
         # delete the middle part
         subtrees = vmap_subtree(forest_to_mutate, next_positions)
         forest[mutate_indices] = forest_to_mutate.mutate(
-            mutate_positions.to(torch.int32), subtrees, args_check=args_check
+            mutate_positions.to(torch.int32), subtrees
         )
 
         return forest

@@ -16,7 +16,7 @@ class DefaultMutation(BaseMutation):
         self.mutation_rate = mutation_rate
         self.generate_configs = generate_configs
 
-    def __call__(self, forest: Forest, args_check: bool = True):
+    def __call__(self, forest: Forest):
         # determine which trees need to mutate
         mutate_indices = torch.rand(forest.pop_size) < self.mutation_rate
 
@@ -33,7 +33,6 @@ class DefaultMutation(BaseMutation):
             input_len=forest_to_mutate.input_len,
             output_len=forest_to_mutate.output_len,
             **self.generate_configs,
-            args_check=args_check,
         )
         # generate mutation positions
         mutate_positions_unlimited = torch.randint(
@@ -48,6 +47,6 @@ class DefaultMutation(BaseMutation):
             mutate_positions_unlimited % forest_to_mutate.batch_subtree_size[:, 0]
         )
 
-        forest[mutate_indices] = forest_to_mutate.mutate(mutate_positions, sub_forest, args_check=args_check)
+        forest[mutate_indices] = forest_to_mutate.mutate(mutate_positions, sub_forest)
 
         return forest

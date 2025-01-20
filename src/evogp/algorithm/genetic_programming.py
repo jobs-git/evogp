@@ -22,7 +22,7 @@ class GeneticProgramming:
         self.forest = forest
         self.pop_size = forest.pop_size
 
-    def step(self, fitness: torch.Tensor, args_check: bool = True):
+    def step(self, fitness: torch.Tensor):
         assert self.forest is not None, "forest is not initialized"
         assert fitness.shape == (
             self.forest.pop_size,
@@ -34,9 +34,8 @@ class GeneticProgramming:
             survivor_indices=next_indices,
             target_cnt=self.pop_size - elite_indices.shape[0],
             fitness=fitness,
-            args_check=args_check,
         )
-        next_forest = self.mutation(next_forest, args_check=args_check)
+        next_forest = self.mutation(next_forest)
         self.forest = self.forest[elite_indices] + next_forest
 
         return self.forest

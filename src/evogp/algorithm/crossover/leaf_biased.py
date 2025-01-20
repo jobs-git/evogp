@@ -27,7 +27,6 @@ class LeafBiasedCrossover(BaseCrossover):
         fitness: torch.Tensor,
         survivor_indices: torch.Tensor,
         target_cnt: torch.Tensor,
-        args_check: bool = True,
     ):
         crossover_cnt = int(target_cnt * self.crossover_rate)
         # choose recipient and donor indices
@@ -95,7 +94,6 @@ class LeafBiasedCrossover(BaseCrossover):
             donor_indices,
             recipient_pos,
             donor_pos,
-            args_check=args_check,
         )
         random_indices = torch.randint(
             low=0,

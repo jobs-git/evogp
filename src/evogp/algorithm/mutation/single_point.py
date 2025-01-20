@@ -16,7 +16,7 @@ class SinglePointMutation(BaseMutation):
         self.mutation_rate = mutation_rate
         self.generate_configs = generate_configs
 
-    def __call__(self, forest: Forest, args_check: bool = True):
+    def __call__(self, forest: Forest):
         # determine which trees need to mutate
         mutate_indices = torch.rand(forest.pop_size) < self.mutation_rate
 

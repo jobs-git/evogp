@@ -53,8 +53,8 @@ fitness = problem.evaluate(forest)
 
 for i in range(50):
     tic = time.time()
-    forest = algorithm.step(fitness, args_check=False)
-    fitness = problem.evaluate(forest, execute_code=4, args_check=False)
+    forest = algorithm.step(fitness)
+    fitness = problem.evaluate(forest)
     torch.cuda.synchronize()
     toc = time.time()
     print(f"step: {i}, max_fitness: {fitness.max()}")

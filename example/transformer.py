@@ -72,7 +72,7 @@ print(estimator.score(diabetes.data, diabetes.target))
 # transformation
 for i in range(100):
     tic = time.time()
-    forest = algorithm.step(fitness, args_check=False)
+    forest = algorithm.step(fitness)
     fitness = problem.evaluate(forest)
     torch.cuda.synchronize()
     toc = time.time()

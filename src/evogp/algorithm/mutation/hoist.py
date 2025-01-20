@@ -17,7 +17,7 @@ class HoistMutation(BaseMutation):
         self.mutation_rate = mutation_rate
         self.generate_configs = generate_configs
 
-    def __call__(self, forest: Forest, args_check: bool = True):
+    def __call__(self, forest: Forest):
         # determine which trees need to mutate
         mutate_indices = torch.rand(forest.pop_size) < self.mutation_rate
 
@@ -48,7 +48,7 @@ class HoistMutation(BaseMutation):
         # put the next mutate positions into the previous mutate positions
         subtrees = vmap_subtree(forest_to_mutate, subtree_positions)
         forest[mutate_indices] = forest_to_mutate.mutate(
-            mutate_positions, subtrees, args_check=args_check
+            mutate_positions, subtrees
         )
 
         return forest

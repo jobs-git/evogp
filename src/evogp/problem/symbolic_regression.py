@@ -55,15 +55,11 @@ class SymbolicRegression(BaseProblem):
         self,
         forest: Forest,
         use_MSE: bool = True,
-        execute_mode: str = "normal",
-        execute_code: int = 0,
-        args_check: bool = True,
+        execute_mode: str = "auto",
     ):
         return -forest.SR_fitness(
             self.datapoints,
             self.labels,
             use_MSE,
             execute_mode,
-            execute_code,
-            args_check,
         )

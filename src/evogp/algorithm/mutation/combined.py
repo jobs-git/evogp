@@ -14,8 +14,8 @@ class CombinedMutation(BaseMutation):
     ):
         self.mutation_operator = mutation_operator
 
-    def __call__(self, forest: Forest, args_check: bool = True):
+    def __call__(self, forest: Forest):
         for mutation in self.mutation_operator:
-            forest = mutation(forest, args_check=args_check)
+            forest = mutation(forest)
 
         return forest

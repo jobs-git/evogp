@@ -15,7 +15,6 @@ class DefaultCrossover(BaseCrossover):
         survivor_indices: torch.Tensor,
         target_cnt: int,
         fitness: torch.Tensor,
-        args_check: bool = True,
     ):
         survivor_forest = forest[survivor_indices]
         # choose left and right indices
@@ -44,5 +43,5 @@ class DefaultCrossover(BaseCrossover):
         # print(f"{tree_sizes=}\n{left_indices=}\n{right_indices=}\n{left_pos=}\n{right_pos=}")
 
         return survivor_forest.crossover(
-            left_indices, right_indices, left_pos, right_pos, args_check=args_check
+            left_indices, right_indices, left_pos, right_pos
         )
