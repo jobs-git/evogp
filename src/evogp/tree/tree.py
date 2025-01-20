@@ -210,3 +210,85 @@ class Tree:
             res += " "
 
         return res
+
+    def to_infix(self):
+        num = self.subtree_size[0]
+        node_type = list(torch.flip(self.node_type[:num], [0]))
+        node_val = list(torch.flip(self.node_value[:num], [0]))
+        stack = []
+        for t, v in zip(node_type, node_val):
+            if t == NType.VAR:
+                stack.append(f"in[{int(v)}]")
+            elif t == NType.CONST:
+                stack.append(f"{v:.2f}")
+            elif t == NType.UFUNC:
+                stack.append(f"{FUNCS_NAMES[int(v)]}({stack.pop()})")
+            elif t == NType.BFUNC:
+                if int(v) in [5, 6, 7]:
+                    stack.append(f"{FUNCS_NAMES[int(v)]}({stack.pop()},{stack.pop()})")
+                else:
+                    stack.append(f"({stack.pop()}{FUNCS_NAMES[int(v)]}{stack.pop()})")
+            elif t == NType.TFUNC:
+                stack.append(
+                    f"{FUNCS_NAMES[int(v)]}({stack.pop()},{stack.pop()},{stack.pop()})"
+                )
+        return stack.pop()
+
+    def _fillout_graph(self, graph):
+        """Recursive Traversal"""
+        node_id = graph.node_count
+        node_type, node_val, output_index = (
+            self.node_type[node_id],
+            self.node_value[node_id],
+            -1,
+            # output_list[node_id],
+        )
+        if node_type == NType.CONST:
+            node_label = f"{node_val:.2f}"
+            child_remain = 0
+        elif node_type == NType.VAR:
+            node_label = chr(ord("A") + int(node_val))
+            child_remain = 0
+        elif node_type == NType.UFUNC:
+            node_label = FUNCS_NAMES[int(node_val)]
+            child_remain = 1
+        elif node_type == NType.BFUNC:
+            node_label = FUNCS_NAMES[int(node_val)]
+            child_remain = 2
+        elif node_type == NType.TFUNC:
+            node_label = FUNCS_NAMES[int(node_val)]
+            child_remain = 3
+
+        if output_index == -1:
+            graph.add_node(node_id, label=node_label)
+        else:
+            graph.add_node(
+                node_id, label=node_label, xlabel=f"out[{output_index}]", color="red"
+            )
+
+        for i in range(child_remain):
+            graph.node_count += 1
+            graph.add_edge(graph.node_count, node_id, order=i)
+            self._fillout_graph(graph)
+
+    def _to_graph(self):
+        import networkx as nx
+
+        graph = nx.DiGraph()
+        graph.node_count = 0
+        self._fillout_graph(graph)
+        graph.node_count += 1
+        return graph
+
+    def to_png(self, fname):
+        from networkx.drawing.nx_agraph import to_agraph
+        import pygraphviz
+
+        graph = self._to_graph()
+        agraph: pygraphviz.agraph.AGraph = to_agraph(graph)
+        agraph.graph_attr.update(rankdir="BT")
+        for edge in agraph.edges():
+            edge.attr['dir'] = 'back'
+        agraph.graph_attr["label"] = f"size: {graph.node_count}"
+        agraph.draw(fname, format="png", prog="dot")
+        agraph.close()
