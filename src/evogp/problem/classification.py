@@ -11,10 +11,10 @@ from sklearn.datasets import load_iris, load_wine, load_breast_cancer, load_digi
 class Classification(BaseProblem):
     def __init__(
         self,
-        multi_output: bool = False,
         datapoints: Optional[Tensor] = None,
         labels: Optional[Tensor] = None,
         dataset: Optional[str] = None,
+        multi_output: bool = True,
     ):
         self.multi_output = multi_output
         if datapoints is not None and labels is not None:

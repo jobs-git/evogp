@@ -19,29 +19,25 @@
 </p>
 
 ## Introduction
-EvoGP is a GPU-accelerated library for tree-based genetic programming (TGP), designed to optimize the evolution of complex tree structures in tasks such as symbolic regression and feature engineering. By tensorizing tree structures, EvoGP enables parallel execution, improving computational speed and scalability through efficient GPU utilization. Its unified framework for genetic operations and parallel fitness evaluation further enhances performance, making it suitable for large-scale evolutionary computations. EvoGP is compatible with the [EvoX](https://github.com/EMI-Group/evox/) framework.
+EvoGP is a fully GPU-accelerated Tree-based Genetic Programming (TGP) framework built on PyTorch, leveraging custom CUDA kernels for core evolutionary operations like tree generation, mutation, crossover, and fitness evaluation. It supports multi-output trees and includes built-in tools for symbolic regression, policy optimization, and classification, along with standardized benchmarks for evaluation and tuning. EvoGP combines the flexibility of Python with the computational power of GPUs, making it an ideal platform for TGP research and applications.
 
 ## Key Features
-- **CUDA-based parallel approach for Tree-Based Genetic Programming (TGP)**:
+- **CUDA-based parallel approach for TGP**:
   
     - Leverage specialized CUDA kernels to optimize critical TGP operations.
     - Enhance computational efficiency, especially for large populations, enabling faster execution compared to traditional TGP methods.
 
-- **GPU-accelerated EvoGP framework**:
   
-    - Integrates CUDA kernels into Python via Pybind and PyTorch, ensuring compatibility with modern computational ecosystems.
-    - Seamlessly integrates with machine learning frameworks, making EvoGP easy to incorporate into existing workflows.
-    
-- **Customizable evolutionary operations**:
+- **GPU-accelerated framework in Python**:
   
-    - Offers a range of evolutionary operation variants, allowing users to tailor configurations for specific tasks.
-    - Supports multi-output trees, making it suitable for complex problems like classification and policy optimization.
-    
-- **Significant performance improvements**:
-  
+    - Integrates CUDA kernels into Python via custom operators of PyTorch, ensuring compatibility with modern computational ecosystems.
     - Achieve up to a **100x** speedup compared to existing TGP implementations while maintaining or improving solution quality.
-    - Extensive experiments demonstrate EvoGP's scalability and efficiency in real-world applications.
     
+- **Rich in extended content**:
+  
+    - Offers a range of genetic operation variants, allowing users to tailor configurations for specific tasks.
+    - Supports multi-output trees, making it suitable for complex problems like classification and policy optimization.
+    - Supports Symbolic Regression, Classification, and Policy Optimization (Brax) benchmarks.
 
 ## Installation
 
@@ -90,7 +86,8 @@ Start your journey with EvoGP in a few simple steps:
 
 1. **Import necessary modules**:
 ```python
-from evogp.tree import Forest
+import torch
+from evogp.tree import Forest, GenerateDiscriptor
 from evogp.algorithm import (
     GeneticProgramming,
     DefaultSelection,
@@ -98,94 +95,75 @@ from evogp.algorithm import (
     DefaultCrossover,
 )
 from evogp.problem import SymbolicRegression
+from evogp.pipeline import StandardPipeline
 ```
 
-2. **Define a problem**:
+2. **Define a problem (Here is Symbolic Regression with XOR-3d)**:
 ```python
-def func(x):
-    val = x[0] ** 4 / (x[0] ** 4 + 1) + x[1] ** 4 / (x[1] ** 4 + 1)
-    return val.reshape(-1)
+XOR_INPUTS = torch.tensor(
+    [
+        [0, 0, 0],
+        [0, 0, 1],
+        [0, 1, 0],
+        [0, 1, 1],
+        [1, 0, 0],
+        [1, 0, 1],
+        [1, 1, 0],
+        [1, 1, 1],
+    ],
+    dtype=torch.float,
+    device="cuda",
+)
 
-problem = SymbolicRegression(func=func, num_inputs=2, num_data=20000, lower_bounds=-5, upper_bounds=5)
+XOR_OUTPUTS = torch.tensor(
+    [[0], [1], [1], [0], [1], [0], [0], [1]],
+    dtype=torch.float,
+    device="cuda",
+)
+
+problem = SymbolicRegression(datapoints=XOR_INPUTS, labels=XOR_OUTPUTS)
 ```
 
 3. **Configure the algorithm**:
 
 ```python
-generate_configs = Forest.random_generate_check(
-   pop_size=1,
-   gp_len=128,
-   input_len=2,
-   output_len=1,
-   const_prob=0.5,
-   out_prob=0.5,
-   func_prob={"+": 0.20, "-": 0.20, "*": 0.20, "/": 0.20, "pow": 0.20},
-   max_layer_cnt=5,
-   layer_leaf_prob=0.2,
-   const_range=(-5, 5),
-   sample_cnt=8,
+
+# create descriptor for generating new trees
+descriptor = GenerateDiscriptor(
+    max_tree_len=128,
+    input_len=problem.problem_dim,
+    output_len=problem.solution_dim,
+    using_funcs=["+", "-", "*", "/"],
+    max_layer_cnt=5,
+    const_samples=[-1, 0, 1],
 )
+
+# create the algorithm
 algorithm = GeneticProgramming(
-   crossover=DefaultCrossover(),
-   mutation=DefaultMutation(mutation_rate=0.2, generate_configs=generate_configs),
-   selection=DefaultSelection(survival_rate=0.3, elite_rate=0.01),
+    initial_forest=Forest.random_generate(pop_size=1000, descriptor=descriptor),
+    crossover=DefaultCrossover(),
+    mutation=DefaultMutation(
+        mutation_rate=0.2, descriptor=descriptor.update(max_layer_cnt=3)
+    ),
+    selection=DefaultSelection(survival_rate=0.3, elite_rate=0.01),
 )
 ```
 
-4. **Initialize the program**:
-
+4. **Run!**:
 ```python
-forest = Forest.random_generate(
-   pop_size=int(5000),
-   gp_len=128,
-   input_len=2,
-   output_len=1,
-   **generate_configs,
+pipeline = StandardPipeline(
+    algorithm,
+    problem,
+    generation_limit=10,
 )
-algorithm.initialize(forest)
-fitness = problem.evaluate(forest)
-```
 
-5. **Run the program**:
-
-```python
-for i in range(10):
-    forest = algorithm.step(fitness, args_check=False)
-    fitness = problem.evaluate(forest, execute_code=4, args_check=False)
-    print(f"step: {i}, max_fitness: {fitness.max()}")
-
+pipeline.run()
 ```
-You will obtain the result like below:
-
-```
-step: 0, max_fitness: -0.11724221706390381
-step: 1, max_fitness: -0.10351374745368958
-step: 2, max_fitness: -0.07007355988025665
-step: 3, max_fitness: -0.07007355242967606
-step: 4, max_fitness: -0.07007355242967606
-step: 5, max_fitness: -0.07007355242967606
-step: 6, max_fitness: -0.07007355242967606
-step: 7, max_fitness: -0.07007354497909546
-step: 8, max_fitness: -0.07007354497909546
-step: 9, max_fitness: -0.036281898617744446
-step: 10, max_fitness: -0.036281898617744446
-```
-6. **Visualize the best individual**:
-```python
-forest[int(fitness.argmax())].to_png("sr_tree.png")
-print(forest[int(fitness.argmax())].to_infix())
-```
-<div style="text-align: center;">
-    <img src="./imgs/sr_tree.png" alt="Visualization of the individual"  width="300" height="300">
-</div>
-
-```
-((((-0.98 * -0.98) * (0.66 − -0.98)) + (-0.98 + (x[0] / x[0]))) − ((0.66 / 0.66) / ((0.66 / 0.51) + (x[0] * (x[0] / 0.51)))))
-```
-
-
+The complete code is available in the [**code**](https://github.com/EMI-Group/evogp/tree/main/example/basic.py) folder.
 
 ## Advanced Genetic Operations
+EvoGP includes multiple genetic operators, allowing users to freely assemble them to build customized TGP algorithms.
+
 | Type       | Name                                  |
 |------------|---------------------------------------|
 | Selection  | [DefaultSelection](src/evogp/algorithm/selection/default.py) |
@@ -211,34 +189,50 @@ print(forest[int(fitness.argmax())].to_infix())
 
 ### Symbolic Regression
 
-Symbolic regression is a powerful method for modeling data relationships using mathematical expressions. In symbolic regression tasks, EvoGP provides flexible and robust functionalities. Users can define custom functions according to their needs or pass their own datasets using `datapoints` and `label` to meet personalized modeling requirements. Below is an example to set up the symbolic regression problem, where the target function is a mathematical combination of two inputs:
+EvoGP supports symbolic regression tasks.
+You can construct a `Problem` with your custom dataset:
 
 ```python
 from evogp.problem import SymbolicRegression
 
+problem = SymbolicRegression(datapoints=YOUR_DATA, labels=YOUR_LABELS)
+```
+Or use a predefined function to generate data:
+```python
 def func(x):
     val = x[0] ** 4 / (x[0] ** 4 + 1) + x[1] ** 4 / (x[1] ** 4 + 1)
     return val.reshape(-1)
 
-problem = SymbolicRegression(func=func, num_inputs=2, num_data=20000, lower_bounds=-5, upper_bounds=5)
+problem = SymbolicRegression(
+    func=func, 
+    num_inputs=2, 
+    num_data=20000, 
+    lower_bounds=-5, 
+    upper_bounds=5
+)
 ```
 
 ------
 
 ### Classification
-
-Classification tasks aim to categorize data points into different classes. EvoGP integrates the sklearn library and includes four classic classification tasks: Iris, Wine, Breast Cancer, and Digits. For users with specific requirements, EvoGP supports custom datasets by allowing them to pass their own `datapoints` and `label`. EvoGP offers two modes of operation: single-output and multi-output. In the single-output mode, EvoGP directly outputs classification results, with fitness corresponding to the number of correctly classified instances. In the multi-output mode, EvoGP outputs the probabilities for each class, selects the class with the highest probability as the result, and evaluates fitness based on log loss. Below is an example to set up the classification problem:
+EvoGP supports classification tasks.
+You can construct a `Problem` with your custom dataset:
 
 ```python
 from evogp.problem import Classification
-problem = Classification(multi_output=False, dataset="iris")
+problem = Classification(datapoints=YOUR_DATA, labels=YOUR_LABELS)
 ```
 
+Or use the provided datasets:
+```python
+dataset_name = ["iris", "wine", "breast_cancer", "digits"]
+problem = Classification(dataset="iris")
+```
 ------
 
 ### Transformation
 
-The transformation task aims to generate new features from raw data to enhance the performance of subsequent models. EvoGP provides support for sklearn datasets, including a built-in example with the Diabetes dataset, allowing users to get started quickly. For custom requirements, users can pass their own datasets using `datapoints` and `label`. During execution, EvoGP automatically generates features most linearly correlated with the `label` based on the input data. The quality of the generated features is evaluated using the Pearson correlation coefficient, which serves as the basis for fitness optimization. Lastly, users can leverage the `new_feature` interface to generate the new features. Below is an example to set up the tranformation problem:
+The transformation task aims to generate new features from raw data to enhance the performance of subsequent models. EvoGP provides support for sklearn datasets, including a built-in example with the Diabetes dataset, allowing users to get started quickly. For custom requirements, users can pass their own datasets using `datapoints` and `label`. During execution, EvoGP automatically generates features most linearly correlated with the `label` based on the input data. The quality of the generated features is evaluated using the Pearson correlation coefficient, which serves as the basis for fitness optimization. Lastly, users can leverage the `new_feature` interface to generate the new features. Below is an example to set up the transformation problem:
 
 ```python
 from evogp.problem import Transformation
@@ -247,18 +241,63 @@ problem = Transformation(dataset="diabetes")
 
 ------
 
-### RL Tasks
-
-The RL (Reinforcement Learning) task focuses on training agents to maximize rewards through interactions with an environment. EvoGP integrates with Google's Brax library and includes built-in examples of MuJoCo tasks, such as Swimmer, HalfCheetah, and Hopper, enabling users to quickly set up and experiment with RL problems. Below is an example of how to set up the RL task problem:
-
+### Robotics Control
+EvoGP supports robotics control tasks.
+You can create a Brax task with the following code:
 ```python
 from evogp.problem import BraxProblem
-problem = BraxProblem("swimmer", max_episode_length=1000)
+problem = BraxProblem("swimmer")
 ```
-
+Note: Using `BraxProblem` requires additional installation of the JAX and Brax packages.
 ------
 
-Detailed examples for the above tasks are available in the [**examples folder**](https://github.com/EMI-Group/evogp/tree/main/example). Users can refer to these examples to quickly explore EvoGP's capabilities and performance in real-world applications.
+Once you create your problem, you can use the following code to solve them:
+```python
+problem = YOUR_HAVE_ALREADY_CREATED_IT
+
+from evogp.tree import Forest, GenerateDiscriptor
+from evogp.algorithm import (
+    GeneticProgramming,
+    DefaultSelection,
+    DefaultMutation,
+    DefaultCrossover,
+)
+from evogp.pipeline import StandardPipeline
+
+descriptor = GenerateDiscriptor(
+    max_tree_len=128,
+    input_len=problem.problem_dim,
+    output_len=problem.solution_dim,
+    using_funcs=["+", "-", "*", "/"],
+    max_layer_cnt=5,
+    const_samples=[-1, 0, 1],
+)
+
+algorithm = GeneticProgramming(
+    initial_forest=Forest.random_generate(pop_size=1000, descriptor=descriptor),
+    crossover=DefaultCrossover(),
+    mutation=DefaultMutation(
+        mutation_rate=0.2, descriptor=descriptor.update(max_layer_cnt=3)
+    ),
+    selection=DefaultSelection(survival_rate=0.3, elite_rate=0.01),
+)
+
+pipeline = StandardPipeline(
+    algorithm,
+    problem,
+    generation_limit=10,
+)
+
+pipeline.run()
+```
+
+Detailed examples for the above tasks are available in the [**examples**](https://github.com/EMI-Group/evogp/tree/main/example).
+
+## Community & Support
+
+EvoGP is a new project, and we will continue to maintain it in the future. We warmly welcome suggestions for improvement!
+- Engage in discussions and share your experiences on [GitHub Issues](https://github.com/EMI-Group/evogp/issues).
+- Join our QQ group (ID: 297969717).
 
 ## Future Work
 
@@ -269,13 +308,6 @@ Detailed examples for the above tasks are available in the [**examples folder**]
 
 We warmly welcome community developers to contribute to EvoGP and look forward to your pull requests!
 
-
-## Community & Support
-
-- Engage in discussions and share your experiences on [GitHub Issues](https://github.com/EMI-Group/evogp/issues).
-- Join our QQ group (ID: 297969717).
-
-
 ## Acknowledgements
 
 1. Thanks to John R. Koza for the [genetic programming (GP) algorithm](https://www.genetic-programming.com/), which provided an excellent automatic programming technique and laid the foundation for the development of EvoGP.
@@ -284,11 +316,8 @@ We warmly welcome community developers to contribute to EvoGP and look forward t
 4. Thanks to [scikit-learn](https://github.com/scikit-learn/scikit-learn) and [Brax](https://github.com/google/brax) for their benchmarking frameworks, which have helped validate the performance improvements in EvoGP.
 5. Thanks to [EvoX](https://github.com/EMI-Group/evox) for providing a flexible framework that allows EvoGP to integrate with other evolutionary algorithms, expanding its potential.
 
-
-
 ## Citing EvoGP
 
 If you use EvoGP in your research and want to cite it in your work, please use:
 ```
-
 ```
