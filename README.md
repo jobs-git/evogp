@@ -273,7 +273,7 @@ You can create a Brax task with the following code:
 from evogp.problem import BraxProblem
 problem = BraxProblem("swimmer")
 ```
-**Note:** Using `BraxProblem` requires additional installation of the (JAX)[https://github.com/jax-ml/jax] and (Brax)[https://github.com/google/brax] packages.
+**Note:** Using `BraxProblem` requires additional installation of the [JAX](https://github.com/jax-ml/jax) and [Brax](https://github.com/google/brax) packages.
 
 ------
 
