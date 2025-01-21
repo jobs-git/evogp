@@ -176,6 +176,24 @@ pipeline = StandardPipeline(
 best = pipeline.run()
 ```
 5. **Check the details for the best tree**:
+   
+Predict results check:
+```
+pred_res = best.forward(XOR_INPUTS)
+print(pred_res)
+```
+Obtain output like this:
+```
+tensor([[0.],
+        [1.],
+        [1.],
+        [0.],
+        [1.],
+        [0.],
+        [0.],
+        [1.]], device='cuda:0')
+```
+
 Mathmatics Formula:
 ```python
 infix_expression = best.to_infix()
@@ -185,7 +203,6 @@ Obtain output like this:
 ```
 (((1.00 * (x[1] * ((x[2] + x[1]) − (0.00 + x[0])))) − ((x[1] − 1.00) + 0.00)) * ((x[1] − (x[2] − x[0])) * (x[1] − (x[2] − x[0]))))
 ```
-<img src="imgs/SymbolicRegression.svg" alt="" height="180">
 
 Visualize:
 ```python
@@ -193,6 +210,7 @@ best.to_png("./imgs/xor_tree.png")
 ```
 Obtain:
 
+<img src="imgs/sr_tree.png" alt="" height="180">
 
 
 The complete code is available in [code](https://github.com/EMI-Group/evogp/tree/main/example/basic.py).
