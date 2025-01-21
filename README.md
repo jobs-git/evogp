@@ -9,7 +9,7 @@
   <br>
 </h1>
 <p align="center">
-🌟 EvoGP: A GPU-accelerated Library for Scalable Tree-Based Genetic Programming 🌟
+🌟 EvoGP: A GPU-accelerated Framework for Tree-Based Genetic Programming 🌟
 </p>
 
 <p align="center">
