@@ -80,6 +80,7 @@ setup(
         "numpy",
         "scikit_learn",
         "networkx",
+        "sympy",
         # "pygraphviz"
     ],
     include_package_data=True,

@@ -193,14 +193,14 @@ tensor([[ 1.0000e-09],
         [ 1.0000e+00]], device='cuda:0')
 ```
 
-Mathmatics Formula:
+Mathmatics Formula (Sympy expression):
 ```python
-infix_expression = best.to_infix()
-print(infix_expression)
+sympy_expression = best.to_sympy_expr()
+print(sympy_expression)
 ```
 Obtain output like this:
 ```
-(1.00 / ((-1.00 / (((x[0] − x[1]) / (-1.00 * (x[0] − x[1]))) − x[2])) − (0.00 − (0.00 + ((x[2] * (x[0] − x[1])) / 0.00)))))
+(-x2*(x0 + x1) + 1.0)*(1.0*x2*(-x2*(x0 + x1) + 1.0) + (x0 - x1)**2)
 ```
 
 Visualize:

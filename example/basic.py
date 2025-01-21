@@ -63,7 +63,7 @@ best = pipeline.run()
 pred_res = best.forward(XOR_INPUTS)
 print(pred_res)
 
-infix_expression = best.to_infix()
-print(infix_expression)
+sympy_expression = best.to_sympy_expr()
+print(sympy_expression)
 
 # best.to_png("./imgs/xor_tree.png")
