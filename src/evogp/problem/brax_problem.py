@@ -29,8 +29,8 @@ class BraxProblem(BaseProblem):
         env_name: str,
         max_episode_length: int,
         seed: int = 42,
-        pop_size: int | None = None,
-        backend: str | None = None,
+        pop_size: int = None,
+        backend: str = None,
         output_transform: Callable = torch.tanh,
         jax_pre_allocate_memory=0.5,
     ):
