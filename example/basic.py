@@ -60,11 +60,10 @@ pipeline = StandardPipeline(
 
 best = pipeline.run()
 
-infix_expression = best.to_infix()
-print(infix_expression)
-
 pred_res = best.forward(XOR_INPUTS)
 print(pred_res)
 
-real_loss = torch.sum((pred_res - XOR_OUTPUTS) ** 2) / XOR_OUTPUTS.shape[0]
-print(real_loss)
+infix_expression = best.to_infix()
+print(infix_expression)
+
+best.to_png("./imgs/xor_tree.png")

@@ -210,7 +210,7 @@ best.to_png("./imgs/xor_tree.png")
 ```
 Obtain:
 
-<img src="imgs/sr_tree.png" alt="" height="180">
+<img src="imgs/sr_tree.png" alt="" height="300">
 
 
 The complete code is available in [code](https://github.com/EMI-Group/evogp/tree/main/example/basic.py).
