@@ -16,7 +16,18 @@ class SymbolicRegression(BaseProblem):
         num_data: Optional[int] = 100,
         lower_bounds: Optional[Tensor] = -1,
         upper_bounds: Optional[Tensor] = 1,
+        execute_mode: str = "hybrid parallel",
     ):
+
+        assert execute_mode in [
+            "torch",
+            "hybrid parallel",
+            "data parallel",
+            "tree parallel",
+            "auto",
+        ], f"execute_mode should be one of ['torch', 'hybrid parallel', 'data parallel', 'tree parallel', 'auto'], but got {execute_mode}"
+        self.execute_mode = execute_mode
+
         if datapoints is not None and labels is not None:
             self.datapoints = datapoints
             self.labels = labels
@@ -55,9 +66,9 @@ class SymbolicRegression(BaseProblem):
         self,
         forest: Forest,
         use_MSE: bool = True,
-        execute_mode: str = "torch",
+
     ):
-        if execute_mode == "torch":
+        if self.execute_mode == "torch":
             # shape (pop_size, datapoints, output_len)
             pred = forest.batch_forward(self.datapoints)
             if use_MSE:
@@ -68,7 +79,7 @@ class SymbolicRegression(BaseProblem):
                 self.datapoints,
                 self.labels,
                 use_MSE,
-                execute_mode,
+                self.execute_mode,
             )
 
     @property
