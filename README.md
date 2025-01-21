@@ -8,6 +8,20 @@
   </a>
   <br>
 </h1>
+
+<p align="center">
+  <picture>
+    <img src="imgs/SymbolicRegression.svg" alt="" height="180">
+  </picture>
+  <picture>
+    <img src="imgs/Classification.svg" alt="" height="180">
+  </picture>
+  <picture>
+    <img src="imgs/Halfcheetah.svg" alt="HalfCheetah" height="180">
+  </picture>
+</p>
+
+
 <p align="center">
 🌟 EvoGP: A GPU-accelerated Framework for Tree-Based Genetic Programming 🌟
 </p>
