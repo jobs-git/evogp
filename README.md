@@ -176,7 +176,7 @@ best = pipeline.run()
 ```
 5. **Check the details for the best tree**:
    
-Predict results check:
+**Predict results check**:
 ```
 pred_res = best.forward(XOR_INPUTS)
 print(pred_res)
@@ -193,7 +193,8 @@ tensor([[ 1.0000e-09],
         [ 1.0000e+00]], device='cuda:0')
 ```
 
-Mathmatics Formula (Sympy expression):
+
+**Mathmatics Formula (Sympy expression)**:
 ```python
 sympy_expression = best.to_sympy_expr()
 print(sympy_expression)
@@ -203,7 +204,8 @@ Obtain output like this:
 (-x2*(x0 + x1) + 1.0)*(1.0*x2*(-x2*(x0 + x1) + 1.0) + (x0 - x1)**2)
 ```
 
-Visualize:
+
+**Visualize**:
 ```python
 best.to_png("./imgs/xor_tree.png")
 ```
