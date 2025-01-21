@@ -160,7 +160,7 @@ pipeline = StandardPipeline(
 
 pipeline.run()
 ```
-The complete code is available in the [**code**](https://github.com/EMI-Group/evogp/tree/main/example/basic.py) folder.
+The complete code is available in [code](https://github.com/EMI-Group/evogp/tree/main/example/basic.py).
 
 ## Advanced Genetic Operations
 EvoGP includes multiple genetic operators, allowing users to freely assemble them to build customized TGP algorithms.
@@ -186,7 +186,7 @@ EvoGP includes multiple genetic operators, allowing users to freely assemble the
 | Mutation   | [CombinedMutation](src/evogp/algorithm/mutation/combined.py) |
 
 
-## Supported Tasks
+## Supported Benchmarks
 
 ### Symbolic Regression
 
@@ -258,7 +258,8 @@ You can create a Brax task with the following code:
 from evogp.problem import BraxProblem
 problem = BraxProblem("swimmer")
 ```
-Note: Using `BraxProblem` requires additional installation of the JAX and Brax packages.
+**Note:** Using `BraxProblem` requires additional installation of the (JAX)[https://github.com/jax-ml/jax] and (Brax)[https://github.com/google/brax] packages.
+
 ------
 
 Once you create your problem, you can use the following code to solve them:
