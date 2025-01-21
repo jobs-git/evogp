@@ -44,7 +44,7 @@ descriptor = GenerateDiscriptor(
 
 # create the algorithm
 algorithm = GeneticProgramming(
-    initial_forest=Forest.random_generate(pop_size=1000, descriptor=descriptor),
+    initial_forest=Forest.random_generate(pop_size=5000, descriptor=descriptor),
     crossover=DefaultCrossover(),
     mutation=DefaultMutation(
         mutation_rate=0.2, descriptor=descriptor.update(max_layer_cnt=3)
@@ -55,7 +55,7 @@ algorithm = GeneticProgramming(
 pipeline = StandardPipeline(
     algorithm,
     problem,
-    generation_limit=30,
+    generation_limit=100,
 )
 
 best = pipeline.run()
@@ -66,4 +66,4 @@ print(pred_res)
 infix_expression = best.to_infix()
 print(infix_expression)
 
-best.to_png("./imgs/xor_tree.png")
+# best.to_png("./imgs/xor_tree.png")

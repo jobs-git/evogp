@@ -143,20 +143,19 @@ problem = SymbolicRegression(datapoints=XOR_INPUTS, labels=XOR_OUTPUTS)
 3. **Configure the algorithm**:
 
 ```python
-
-# create descriptor for generating new trees
+# create decriptor for generating new trees
 descriptor = GenerateDiscriptor(
-    max_tree_len=128,
+    max_tree_len=32,
     input_len=problem.problem_dim,
     output_len=problem.solution_dim,
     using_funcs=["+", "-", "*", "/"],
-    max_layer_cnt=5,
+    max_layer_cnt=4,
     const_samples=[-1, 0, 1],
 )
 
 # create the algorithm
 algorithm = GeneticProgramming(
-    initial_forest=Forest.random_generate(pop_size=1000, descriptor=descriptor),
+    initial_forest=Forest.random_generate(pop_size=5000, descriptor=descriptor),
     crossover=DefaultCrossover(),
     mutation=DefaultMutation(
         mutation_rate=0.2, descriptor=descriptor.update(max_layer_cnt=3)
@@ -170,7 +169,7 @@ algorithm = GeneticProgramming(
 pipeline = StandardPipeline(
     algorithm,
     problem,
-    generation_limit=10,
+    generation_limit=100,
 )
 
 best = pipeline.run()
@@ -184,14 +183,14 @@ print(pred_res)
 ```
 Obtain output like this:
 ```
-tensor([[0.],
-        [1.],
-        [1.],
-        [0.],
-        [1.],
-        [0.],
-        [0.],
-        [1.]], device='cuda:0')
+tensor([[ 1.0000e-09],
+        [ 1.0000e+00],
+        [ 1.0000e+00],
+        [-1.0000e-09],
+        [ 1.0000e+00],
+        [ 1.0000e-09],
+        [ 1.0000e-09],
+        [ 1.0000e+00]], device='cuda:0')
 ```
 
 Mathmatics Formula:
@@ -201,7 +200,7 @@ print(infix_expression)
 ```
 Obtain output like this:
 ```
-(((1.00 * (x[1] * ((x[2] + x[1]) − (0.00 + x[0])))) − ((x[1] − 1.00) + 0.00)) * ((x[1] − (x[2] − x[0])) * (x[1] − (x[2] − x[0]))))
+(1.00 / ((-1.00 / (((x[0] − x[1]) / (-1.00 * (x[0] − x[1]))) − x[2])) − (0.00 − (0.00 + ((x[2] * (x[0] − x[1])) / 0.00)))))
 ```
 
 Visualize:
