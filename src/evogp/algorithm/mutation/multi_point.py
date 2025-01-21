@@ -7,6 +7,12 @@ from ...tree import Forest, MAX_STACK, randint, NType
 
 
 class MultiPointMutation(BaseMutation):
+    """
+    MultiPointMutation implements a mutation strategy where a specific number of nodes 
+    within an individual (tree) are selected based on the `mutation_intensity` parameter 
+    and each of these selected nodes undergoes a SinglePointMutation. This helps introduce 
+    more diversity into the individual by making multiple small changes.
+    """
 
     def __init__(
         self,
@@ -14,31 +20,60 @@ class MultiPointMutation(BaseMutation):
         generate_configs: dict,
         mutation_intensity: float = 0.3,
     ):
+        """
+        Args:
+            mutation_rate (float): The probability of each individual undergoing mutation.
+            generate_configs (dict): Configuration dictionary for random node generation.
+            mutation_intensity (float): Determines the proportion of nodes in the tree that will be mutated. 
+                                        It is a fraction between 0 and 1.
+        """
         self.mutation_rate = mutation_rate
         self.generate_configs = generate_configs
         self.mutation_intensity = mutation_intensity
 
     def __call__(self, forest: Forest):
-        # determine which trees need to mutate
+        """
+        Perform the multi-point mutation where a specific proportion of nodes in the tree are selected 
+        and each undergoes SinglePointMutation.
+
+        Args:
+            forest (Forest): The current population of trees (Forest object).
+
+        Returns:
+            Forest: The updated population after mutation, where some individuals have undergone multi-point mutation.
+        """
+        # Determine which trees need to mutate based on the mutation rate
         mutate_indices = torch.rand(forest.pop_size) < self.mutation_rate
 
-        if mutate_indices.sum() == 0:  # no mutation
+        # If no trees are selected for mutation, return the original forest
+        if mutate_indices.sum() == 0:  
             return forest
 
+        # Extract the subset of trees that need to mutate
         forest_to_mutate = forest[mutate_indices]
 
         def choose_mutation_targets(size_tensor):
+            """
+            Randomly choose mutation targets (nodes to mutate) based on mutation intensity.
+            A specific number of nodes are selected as mutation targets in each tree.
+
+            Args:
+                size_tensor (Tensor): The size of each tree.
+
+            Returns:
+                Tensor: A tensor indicating which nodes should be mutated (True/False).
+            """
             tree_size = size_tensor[:, 0].reshape(-1, 1)
             random = torch.rand(tree_size.shape, device="cuda")
             return (random < self.mutation_intensity) & (
                 torch.arange(size_tensor.shape[1], device="cuda") < tree_size
             )
 
-        # generate mutation indices and positions
+        # Generate mutation indices and positions based on mutation intensity
         mutation_targets = choose_mutation_targets(forest_to_mutate.batch_subtree_size)
         num_targets = mutation_targets.sum()
 
-        # random generate constant
+        # Randomly generate constant values for the mutation
         random_idx = torch.randint(
             low=0,
             high=self.generate_configs["const_samples"].shape[0],
@@ -47,7 +82,7 @@ class MultiPointMutation(BaseMutation):
         )
         random_const = self.generate_configs["const_samples"][random_idx]
 
-        # random generate other
+        # Randomly generate other types of node values based on the mutated node type
         mutated_node_type = forest_to_mutate.batch_node_type[mutation_targets]
         mapping_range = torch.tensor(
             [
@@ -65,9 +100,11 @@ class MultiPointMutation(BaseMutation):
             high=mapping_range[mutated_node_type.to(torch.int32)][:, 1],
         )
 
-        # mutate the trees
+        # Mutate the selected nodes by replacing them with new node values (either constant or other)
         forest_to_mutate.batch_node_value[mutation_targets] = torch.where(
             mutated_node_type == NType.CONST, random_const, random_other
         )
+        
+        # Update the forest with the mutated trees
         forest[mutate_indices] = forest_to_mutate
         return forest

@@ -59,3 +59,4 @@ pipeline = StandardPipeline(
 )
 
 pipeline.run()
+pipeline.best_tree.to_png("best_tree.png")

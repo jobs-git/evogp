@@ -4,11 +4,20 @@ from functools import partial
 
 
 class BaseSelector:
+    """
+    Base class for selection operators. These selectors are designed to provide receptor
+    and donor selection strategies for DiversityCrossover or LeafBiasedCrossover operations.
+    """
     def __call__(self, fitness: Tensor, choosed_num: int) -> Tensor:
         raise NotImplementedError
 
 
 class RankSelector(BaseSelector):
+    """
+    Rank-based selection operator. It assigns a probability to each individual based on their
+    rank in the population, with higher-ranked individuals having a higher chance of being selected.
+    Used for selecting receptors and donors in DiversityCrossover or LeafBiasedCrossover.
+    """
     def __init__(self, selection_pressure: float = 0.5):
         self.sp = selection_pressure
 
@@ -25,6 +34,11 @@ class RankSelector(BaseSelector):
 
 
 class RouletteSelector(BaseSelector):
+    """
+    Roulette wheel selection operator. This operator selects individuals based on their
+    proportional fitness. Individuals with higher fitness values are more likely to be selected.
+    Used for selecting receptors and donors in DiversityCrossover or LeafBiasedCrossover.
+    """
     def __init__(self):
         pass
 
@@ -38,6 +52,11 @@ class RouletteSelector(BaseSelector):
 
 
 class TournamentSelector(BaseSelector):
+    """
+    Tournament selection operator. It selects a subset of individuals (contenders) randomly,
+    and from each subset, the best individual is selected based on fitness. Can be used with 
+    DiversityCrossover or LeafBiasedCrossover for receptor and donor selection.
+    """
     def __init__(
         self,
         tournament_size: int,
@@ -92,6 +111,11 @@ class TournamentSelector(BaseSelector):
 
 
 class TruncationSelector(BaseSelector):
+    """
+    Truncation selection operator. This operator selects the top-performing individuals based 
+    on their fitness and eliminates a fraction of the population. The remaining individuals 
+    are selected for crossover, such as in DiversityCrossover or LeafBiasedCrossover.
+    """
     def __init__(self, survivor_rate: float = 0.5):
         self.survivor_rate = survivor_rate
 

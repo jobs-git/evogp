@@ -7,25 +7,47 @@ from ...tree import Forest, MAX_STACK, NType, randint
 
 
 class SinglePointMutation(BaseMutation):
+    """
+    SinglePointMutation implements a mutation strategy where a random node in the tree is selected 
+    and replaced with a new node of the same type, chosen randomly from a node pool.
+    This operation helps maintain the structure of the tree while introducing variation by changing individual nodes.
+    """
 
     def __init__(
         self,
         mutation_rate: float,
         generate_configs: dict,
     ):
+        """
+        Args:
+            mutation_rate (float): The probability of each individual undergoing mutation. Should be between 0 and 1.
+            generate_configs (dict): Configuration dictionary for random node generation (used in mutation).
+        """
         self.mutation_rate = mutation_rate
         self.generate_configs = generate_configs
 
     def __call__(self, forest: Forest):
-        # determine which trees need to mutate
+        """
+        Perform the single-point mutation by randomly selecting a node in the tree and replacing it 
+        with a new node of the same type from the node pool.
+
+        Args:
+            forest (Forest): The current population of trees (Forest object).
+
+        Returns:
+            Forest: The updated population after mutation, where some individuals have undergone the single-point mutation.
+        """
+        # Determine which trees need to mutate based on the mutation rate
         mutate_indices = torch.rand(forest.pop_size) < self.mutation_rate
 
-        if mutate_indices.sum() == 0:  # no mutation
+        # If no trees are selected for mutation, return the original forest
+        if mutate_indices.sum() == 0:  
             return forest
 
+        # Extract the subset of trees that need to mutate
         forest_to_mutate = forest[mutate_indices]
 
-        # generate mutation positions
+        # Generate random mutation positions within the trees
         num_mutate = forest_to_mutate.pop_size
         mutate_positions = randint(
             size=(num_mutate,),
@@ -34,7 +56,7 @@ class SinglePointMutation(BaseMutation):
             dtype=torch.int32,
         )
 
-        # random generate constant
+        # Randomly generate a constant for mutation
         random_idx = torch.randint(
             low=0,
             high=self.generate_configs["const_samples"].shape[0],
@@ -43,7 +65,7 @@ class SinglePointMutation(BaseMutation):
         )
         random_const = self.generate_configs["const_samples"][random_idx]
 
-        # random generate other
+        # Randomly generate other types of node values based on the mutated node type
         mutated_node_type = forest_to_mutate.batch_node_type[
             torch.arange(num_mutate), mutate_positions
         ]
@@ -63,8 +85,9 @@ class SinglePointMutation(BaseMutation):
             high=mapping_range[mutated_node_type.to(torch.int32)][:, 1],
         )
 
-        # mutate the trees
+        # Mutate the selected nodes by replacing them with the new node values (either constant or other)
         forest.batch_node_value[mutate_indices, mutate_positions] = torch.where(
             mutated_node_type == NType.CONST, random_const, random_other
         )
+
         return forest

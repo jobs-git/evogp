@@ -41,8 +41,12 @@ class TournamentSelection(BaseSelection):
             elite_cnt (Optional[int]): The exact number of elite individuals to retain (if provided). Defaults to None.
         """
         super().__init__()
+
+        # Ensure survivor_rate and elite_rate are within the valid range [0, 1].
         assert 0 <= survivor_rate <= 1, "survival_rate should be in [0, 1]"
         assert 0 <= elite_rate <= 1, "elite_rate should be in [0, 1]"
+
+        # Initialize the parameters.
         self.t_size = tournament_size
         self.best_p = best_probability
         self.replace = replace
@@ -53,33 +57,48 @@ class TournamentSelection(BaseSelection):
 
 
     def __call__(self, forest: Forest, fitness: torch.Tensor):
+        """
+        Perform tournament selection and return the indices of selected elite and survivor individuals.
+
+        Args:
+            forest (Forest): The population of individuals represented as a Forest object.
+            fitness (torch.Tensor): A tensor containing the fitness values of individuals in the population.
+
+        Returns:
+            elite_indices (torch.Tensor): Indices of the individuals selected as elites.
+            survivor_indices (torch.Tensor): Indices of the individuals selected as survivors based on tournament selection.
+        """
+        
+        # Function to select individuals for tournament (with different randomness for each call).
         @partial(torch.vmap, randomness="different")
         def traverse_once(p):
             return torch.multinomial(
                 p, n_tournament * self.t_size, replacement=self.replace
             ).to(torch.int32)
 
+        # Function to select the winner without probability, always choosing the best individual.
         @torch.vmap
         def t_selection_without_p(contenders):
             contender_fitness = fitness[contenders]
             best_idx = torch.argmax(contender_fitness)[None]
             return contenders[best_idx]
 
+        # Function to select the winner with probability, based on the best individual's fitness.
         @partial(torch.vmap, randomness="different")
         def t_selection_with_p(contenders):
             contender_fitness = fitness[contenders]
             idx_rank = torch.argsort(
                 contender_fitness, descending=True
-            )  # the index of individual from high to low
+            )  # Sort individuals by fitness in descending order.
             random = torch.rand(1).cuda()
-            best_p = torch.tensor(self.best_p).cuda()
+            best_p = torch.tensor(self.best_p).cuda()  # Probability of selecting the best individual.
             nth_choosed = (torch.log(random) / torch.log(1 - best_p)).to(torch.int32)
             nth_choosed = torch.where(
                 nth_choosed >= self.t_size, torch.tensor(0), nth_choosed
             )
             return contenders[idx_rank[nth_choosed]]
 
-        # preprocess
+        # Preprocess survivor and elite counts based on provided counts or rates.
         if self.survivor_cnt is not None:
             survivor_cnt = self.survivor_cnt
         else:
@@ -90,22 +109,24 @@ class TournamentSelection(BaseSelection):
         else:
             elite_cnt = int(forest.pop_size * self.elite_rate)
 
-        # survivor selection
+        # Survivor selection: run multiple tournaments and select winners.
         total_size = fitness.size(0)
         n_tournament = int(total_size / self.t_size)
         k_times = int((survivor_cnt - 1) / n_tournament) + 1
         p = torch.ones((k_times, total_size)).cuda()
         contenders = traverse_once(p).reshape(-1, self.t_size)[:survivor_cnt]
 
+        # Choose survivor indices based on the tournament selection strategy.
         if self.t_size > 1000:
             survivor_indices = t_selection_without_p(contenders).reshape(-1)
         else:
             survivor_indices = t_selection_with_p(contenders).reshape(-1)
 
-        # elite selection
+        # Elite selection: select the top individuals based on fitness.
         if elite_cnt == 0:
             elite_indices = torch.tensor([], device="cuda", dtype=torch.int64)
         else:
+            # Sort individuals by fitness in descending order to get the top elites.
             sorted_fitness, sorted_indices = torch.sort(fitness, descending=True)
             elite_indices = sorted_indices[:elite_cnt]
 
