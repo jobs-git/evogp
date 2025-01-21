@@ -5,21 +5,15 @@ from ...tree import Forest, MAX_STACK, randint
 from ..selection import BaseSelector
 from .base import BaseCrossover
 
+
 class DiversityCrossover(BaseCrossover):
     """
-    Implements a diversity-preserving crossover operation for genetic programming.
+    DiversityCrossover implements a crossover strategy where individuals undergo crossover based on their diversity.
 
-    This class is responsible for performing crossover operations between trees
-    in a population of genetic programming trees. It allows for the selection of
-    donor and recipient trees, as well as the positions within the trees where
-    crossover should occur.
-
-    Attributes:
-        crossover_rate (int): The probability (between 0 and 1) that a crossover will occur.
-        recipient_selector (Optional[BaseSelector]): A selection mechanism to choose
-            recipient trees for crossover. If None, random selection is used.
-        donor_selector (Optional[BaseSelector]): A selection mechanism to choose
-            donor trees for crossover. If None, random selection is used.
+    Unlike `DefaultCrossover`, this strategy allows for flexible selection of the recipient and donor individuals 
+    using specific selection operators (`recipient_selector` and `donor_selector`). Additionally, a `crossover_rate` 
+    parameter determines the proportion of the population that will undergo crossover. The remaining individuals bypass 
+    the crossover process and are copied directly to the next generation.
     """
 
     def __init__(
@@ -29,15 +23,12 @@ class DiversityCrossover(BaseCrossover):
         donor_selector: Optional[BaseSelector] = None,
     ):
         """
-        Initializes the DiversityCrossover instance.
-
         Args:
-            crossover_rate (int): The proportion of target individuals to be generated
-                via crossover. Default is 0.9.
-            recipient_selector (Optional[BaseSelector]): Selector for choosing recipient
-                trees. Default is None, which uses random selection.
-            donor_selector (Optional[BaseSelector]): Selector for choosing donor trees.
-                Default is None, which uses random selection.
+            crossover_rate (float): The proportion of individuals that will undergo crossover. Should be between 0 and 1.
+            recipient_selector (Optional[BaseSelector]): A selection operator used to choose recipient individuals for crossover. 
+                If None, random selection will be used.
+            donor_selector (Optional[BaseSelector]): A selection operator used to choose donor individuals for crossover.
+                If None, random selection will be used.
         """
         self.crossover_rate = crossover_rate
         self.recipient_selector = recipient_selector
@@ -51,24 +42,23 @@ class DiversityCrossover(BaseCrossover):
         target_cnt: torch.Tensor,
     ):
         """
-        Executes the crossover operation on the provided forest.
+        Perform crossover on the survivors based on selected recipient and donor individuals.
 
         Args:
-            forest (Forest): The population of trees represented as a Forest object.
-            fitness (torch.Tensor): Fitness scores of the individuals in the population.
-            survivor_indices (torch.Tensor): Indices of individuals selected to survive
-                into the next generation.
-            target_cnt (torch.Tensor): The target number of individuals for the next
-                generation.
+            forest (Forest): The population of individuals represented as a Forest object.
+            fitness (torch.Tensor): A tensor containing the fitness values of individuals.
+            survivor_indices (torch.Tensor): Indices of the individuals selected as survivors for crossover.
+            target_cnt (torch.Tensor): The total number of individuals to produce.
 
         Returns:
-            Forest: A new forest containing individuals created via crossover and
-            individuals that were statically copied.
+            torch.Tensor: A tensor of new individuals formed by crossover and direct copying.
         """
-        # Calculate the number of crossovers to perform
+
+        # Calculate the number of crossovers to perform based on the crossover rate.
         crossover_cnt = int(target_cnt * self.crossover_rate)
 
-        # Choose recipient indices for crossover
+        # Choose recipient indices for crossover based on the recipient_selector (if provided), 
+        # otherwise choose randomly from survivor_indices.
         if self.recipient_selector is not None:
             recipient_indices = self.recipient_selector(fitness, crossover_cnt)
         else:
@@ -82,7 +72,8 @@ class DiversityCrossover(BaseCrossover):
             )
             recipient_indices = survivor_indices[random_indices]
 
-        # Choose donor indices for crossover
+        # Choose donor indices for crossover based on the donor_selector (if provided), 
+        # otherwise choose randomly from survivor_indices.
         if self.donor_selector is not None:
             donor_indices = self.donor_selector(fitness, crossover_cnt)
         else:
@@ -96,7 +87,7 @@ class DiversityCrossover(BaseCrossover):
             )
             donor_indices = survivor_indices[random_indices]
 
-        # Select positions within the recipient and donor trees for crossover
+        # Select positions within the recipient and donor trees for crossover.
         size_tensor = forest.batch_subtree_size
         recipient_pos = randint(
             size=(crossover_cnt,),
@@ -111,7 +102,7 @@ class DiversityCrossover(BaseCrossover):
             dtype=torch.int32,
         )
 
-        # Perform the crossover operation to generate new trees
+        # Perform the crossover operation to generate new trees from the recipient and donor.
         crossovered_forest = forest.crossover(
             recipient_indices,
             donor_indices,
@@ -119,7 +110,7 @@ class DiversityCrossover(BaseCrossover):
             donor_pos,
         )
 
-        # Select remaining individuals to copy directly to the new generation
+        # Select remaining individuals that will directly copy to the new generation without crossover.
         random_indices = torch.randint(
             low=0,
             high=survivor_indices.size(0),
@@ -130,5 +121,5 @@ class DiversityCrossover(BaseCrossover):
         )
         static_forest = forest[random_indices]
 
-        # Combine crossovered trees and statically copied trees
+        # Combine the crossovered trees and the statically copied trees to form the new population.
         return crossovered_forest + static_forest

@@ -8,25 +8,51 @@ from .mutation_utils import vmap_subtree
 
 
 class HoistMutation(BaseMutation):
+    """
+    HoistMutation implements a mutation strategy where a subtree is randomly selected from a GP individual, 
+    and then a subtree within it is selected and moved to replace the original subtree's root.
+    This operation is designed to help mitigate excessive growth (bloating) in GP individuals by 
+    ensuring that larger subtrees are potentially shrunk or replaced with more compact structures.
+    """
 
     def __init__(
         self,
         mutation_rate: float,
         generate_configs: dict,
     ):
+        """
+        Args:
+            mutation_rate (float): The probability of each individual undergoing mutation. Should be between 0 and 1.
+            generate_configs (dict): Configuration dictionary for subtree generation (used in mutation).
+        """
         self.mutation_rate = mutation_rate
         self.generate_configs = generate_configs
 
     def __call__(self, forest: Forest):
-        # determine which trees need to mutate
+        """
+        Perform the hoist mutation by selecting a subtree from a GP individual and moving a subtree within it 
+        to the root position of the original subtree.
+
+        The mutation helps reduce bloating by potentially replacing large subtrees with more compact structures 
+        that are part of the individual.
+
+        Args:
+            forest (Forest): The current population of trees (Forest object).
+
+        Returns:
+            Forest: The updated population after mutation, where some individuals have undergone the hoist operation.
+        """
+        # Determine which trees need to mutate based on the mutation rate
         mutate_indices = torch.rand(forest.pop_size) < self.mutation_rate
 
-        if mutate_indices.sum() == 0:  # no mutation
+        # If no trees are selected for mutation, return the original forest
+        if mutate_indices.sum() == 0:  
             return forest
         else:
+            # Extract the subset of trees that need to mutate
             forest_to_mutate = forest[mutate_indices]
 
-        # generate mutation positions
+        # Generate random mutation positions within the selected trees
         num_mutate = forest_to_mutate.pop_size
         mutate_positions = randint(
             size=(num_mutate,),
@@ -35,7 +61,7 @@ class HoistMutation(BaseMutation):
             dtype=torch.int32,
         )
 
-        # generate the next mutate positions
+        # Generate positions for subtrees within the selected mutation positions
         subtree_positions = randint(
             size=(num_mutate,),
             low=0,
@@ -45,7 +71,7 @@ class HoistMutation(BaseMutation):
             dtype=torch.int64,
         )
 
-        # put the next mutate positions into the previous mutate positions
+        # Select the subtrees to be "hoisted" (moved to the root position)
         subtrees = vmap_subtree(forest_to_mutate, subtree_positions)
         forest[mutate_indices] = forest_to_mutate.mutate(
             mutate_positions, subtrees

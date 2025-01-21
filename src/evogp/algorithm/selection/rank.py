@@ -40,9 +40,13 @@ class RankSelection(BaseSelection):
             elite_cnt (Optional[int]): The exact number of elite individuals to retain (if not None).
         """
         super().__init__()
+        
+        # Ensure selection_pressure, survivor_rate, and elite_rate are within valid bounds [0, 1].
         assert 0 <= selection_pressure <= 1, "selection_pressure should be in [0, 1]"
         assert 0 <= survivor_rate <= 1, "survivor_rate should be in [0, 1]"
         assert 0 <= elite_rate <= 1, "elite_rate should be in [0, 1]"
+
+        # Initialize the parameters.
         self.sp = selection_pressure
         self.survivor_rate = survivor_rate
         self.survivor_cnt = survivor_cnt
@@ -50,7 +54,18 @@ class RankSelection(BaseSelection):
         self.elite_cnt = elite_cnt
 
     def __call__(self, forest: Forest, fitness: torch.Tensor):
-        # preprocess
+        """
+        Perform the rank-based selection operation and return the indices of selected elite and survivor individuals.
+
+        Args:
+            forest (Forest): The population of individuals represented as a Forest object.
+            fitness (torch.Tensor): A tensor containing the fitness values of individuals in the population.
+
+        Returns:
+            elite_indices (torch.Tensor): Indices of the individuals selected as elites.
+            survivor_indices (torch.Tensor): Indices of the individuals selected to survive based on selection pressure.
+        """
+        # Preprocess the number of survivors and elites based on provided counts or rates.
         if self.survivor_cnt is not None:
             survivor_cnt = self.survivor_cnt
         else:
@@ -61,18 +76,18 @@ class RankSelection(BaseSelection):
         else:
             elite_cnt = int(forest.pop_size * self.elite_rate)
 
-        # survivor selection
+        # Survivor selection based on rank and selection pressure.
         sorted_fitness, sorted_indices = torch.sort(fitness, descending=True)
-        rank = sorted_indices.cuda()
-        n = forest.pop_size
+        rank = sorted_indices.cuda()  # Assign ranks to individuals based on sorted fitness.
+        n = forest.pop_size  # Population size
         random_indices = torch.multinomial(
-            (1 / n) * (1 + self.sp * (1 - 2 * rank / (n - 1))),
-            survivor_cnt,
-            replacement=True,
+            (1 / n) * (1 + self.sp * (1 - 2 * rank / (n - 1))),  # Calculate selection probabilities based on rank.
+            survivor_cnt,  # Select the number of survivors.
+            replacement=True,  # Allow selection with replacement.
         ).to(torch.int32)
-        survivor_indices = sorted_indices[random_indices]
+        survivor_indices = sorted_indices[random_indices]  # Get the indices of selected survivors.
 
-        # elite selection
-        elite_indices = sorted_indices[:elite_cnt]
+        # Elite selection based on the highest fitness values.
+        elite_indices = sorted_indices[:elite_cnt]  # Select elite individuals.
 
         return elite_indices, survivor_indices
