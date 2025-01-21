@@ -55,14 +55,21 @@ class SymbolicRegression(BaseProblem):
         self,
         forest: Forest,
         use_MSE: bool = True,
-        execute_mode: str = "auto",
+        execute_mode: str = "torch",
     ):
-        return -forest.SR_fitness(
-            self.datapoints,
-            self.labels,
-            use_MSE,
-            execute_mode,
-        )
+        if execute_mode == "torch":
+            # shape (pop_size, datapoints, output_len)
+            pred = forest.batch_forward(self.datapoints)
+            if use_MSE:
+                return -torch.mean((pred - self.labels[None, :, :]) ** 2, dim=(1, 2))
+
+        else:
+            return -forest.SR_fitness(
+                self.datapoints,
+                self.labels,
+                use_MSE,
+                execute_mode,
+            )
 
     @property
     def problem_dim(self):

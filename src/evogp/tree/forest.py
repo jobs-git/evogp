@@ -311,7 +311,7 @@ class Forest:
         ], f"execute_mode should be one of ['hybrid parallel', 'data parallel', 'tree parallel', 'auto'], but got {execute_mode}"
 
         if execute_mode == "hybrid parallel":
-            execute_code = 3
+            execute_code = 0
         elif execute_mode == "data parallel":
             execute_code = 1
         elif execute_mode == "tree parallel":

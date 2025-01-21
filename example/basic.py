@@ -34,11 +34,11 @@ problem = SymbolicRegression(datapoints=XOR_INPUTS, labels=XOR_OUTPUTS)
 
 # create decriptor for generating new trees
 descriptor = GenerateDiscriptor(
-    max_tree_len=128,
+    max_tree_len=32,
     input_len=problem.problem_dim,
     output_len=problem.solution_dim,
     using_funcs=["+", "-", "*", "/"],
-    max_layer_cnt=5,
+    max_layer_cnt=4,
     const_samples=[-1, 0, 1],
 )
 
@@ -55,7 +55,16 @@ algorithm = GeneticProgramming(
 pipeline = StandardPipeline(
     algorithm,
     problem,
-    generation_limit=10,
+    generation_limit=30,
 )
 
-pipeline.run()
+best = pipeline.run()
+
+infix_expression = best.to_infix()
+print(infix_expression)
+
+pred_res = best.forward(XOR_INPUTS)
+print(pred_res)
+
+real_loss = torch.sum((pred_res - XOR_OUTPUTS) ** 2) / XOR_OUTPUTS.shape[0]
+print(real_loss)

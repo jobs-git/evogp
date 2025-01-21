@@ -56,7 +56,7 @@ class Tree:
         batch_node_type = self.node_type.repeat(batch_size, 1)
         batch_subtree_size = self.subtree_size.repeat(batch_size, 1)
 
-        res = torch.ops.evogp.tree_evaluate(
+        res = torch.ops.evogp_cuda.tree_evaluate(
             batch_size,
             self.max_tree_len,
             self.input_len,
@@ -72,11 +72,33 @@ class Tree:
         else:
             return res
 
-    def SR_fitness(self, inputs: Tensor, labels: Tensor, use_MSE: bool = True):
+    def SR_fitness(
+        self,
+        inputs: Tensor,
+        labels: Tensor,
+        use_MSE: bool = True,
+        execute_mode: str = "auto",
+    ):
         inputs = check_tensor(inputs)
         labels = check_tensor(labels)
 
+        assert execute_mode in [
+            "hybrid parallel",
+            "data parallel",
+            "tree parallel",
+            "auto",
+        ], f"execute_mode should be one of ['hybrid parallel', 'data parallel', 'tree parallel', 'auto'], but got {execute_mode}"
+
+        if execute_mode == "hybrid parallel":
+            execute_code = 3
+        elif execute_mode == "data parallel":
+            execute_code = 1
+        elif execute_mode == "tree parallel":
+            execute_code = 2
+        elif execute_mode == "auto":
+            execute_code = 4
         batch_size = inputs.shape[0]
+
         assert inputs.shape == (
             batch_size,
             self.input_len,
@@ -87,18 +109,19 @@ class Tree:
             self.output_len,
         ), f"outputs shape should be ({batch_size}, {self.output_len}), but got {labels.shape}"
 
-        res = torch.ops.evogp.tree_SR_fitness(
+        res = torch.ops.evogp_cuda.tree_SR_fitness(
             1,
             batch_size,
             self.max_tree_len,
             self.input_len,
             self.output_len,
             use_MSE,
-            self.batch_node_value,
-            self.batch_node_type,
-            self.batch_subtree_size,
+            self.node_value[None, :],
+            self.node_type[None, :],
+            self.subtree_size[None, :],
             inputs,
             labels,
+            execute_code,
         )
 
         return res

@@ -173,8 +173,28 @@ pipeline = StandardPipeline(
     generation_limit=10,
 )
 
-pipeline.run()
+best = pipeline.run()
 ```
+5. **Check the details for the best tree**:
+Mathmatics Formula:
+```python
+infix_expression = best.to_infix()
+print(infix_expression)
+```
+Obtain output like this:
+```
+(((1.00 * (x[1] * ((x[2] + x[1]) − (0.00 + x[0])))) − ((x[1] − 1.00) + 0.00)) * ((x[1] − (x[2] − x[0])) * (x[1] − (x[2] − x[0]))))
+```
+<img src="imgs/SymbolicRegression.svg" alt="" height="180">
+
+Visualize:
+```python
+best.to_png("./imgs/xor_tree.png")
+```
+Obtain:
+
+
+
 The complete code is available in [code](https://github.com/EMI-Group/evogp/tree/main/example/basic.py).
 
 ## Advanced Genetic Operations

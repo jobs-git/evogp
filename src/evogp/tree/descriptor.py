@@ -54,7 +54,7 @@ class GenerateDiscriptor:
                 layer_leaf_prob is not None
             ), "layer_leaf_prob should not be None when depth2leaf_probs is None"
             assert (
-                2**max_layer_cnt <= max_tree_len
+                2**max_layer_cnt < max_tree_len
             ), f"max_layer_cnt is too large for max_tree_len={max_tree_len}"
 
             depth2leaf_probs = torch.tensor(

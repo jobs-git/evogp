@@ -431,7 +431,7 @@ __global__ void treeGPRegressionFitnessKernel(
 	const unsigned int nGP = blockIdx.x, nTB = blockIdx.y, threadId = threadIdx.x;
 	const unsigned int dataPointId = nTB * blockDim.x + threadId;
 
-	__shared__ float sharedFitness[SR_BLOCK_SIZE];
+	__shared__ float sharedFitness[SR_BLOCK_SIZE]{};
 
 	if (nGP >= popSize || nTB >= block_cnt_per_tree)
 		return;
