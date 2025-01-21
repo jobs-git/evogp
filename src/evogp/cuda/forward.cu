@@ -478,7 +478,7 @@ __global__ void treeGPRegressionFitnessKernel(
         {
             sharedFitness[threadId] += sharedFitness[threadId + size];
         }
-		if (size >= 32)
+		// if (size >= 32)
         	__syncthreads();
     }
 
@@ -683,7 +683,7 @@ __global__ void constant_tree_treeGPRegressionFitnessKernel(
         {
             sharedFitness[threadId] += sharedFitness[threadId + size];
         }
-		if (size >= 32)
+		// if (size >= 32)
         	__syncthreads();
     }
 
