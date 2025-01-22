@@ -2,7 +2,38 @@ import warnings
 from typing import Optional, Tuple, Union
 import torch
 from torch import Tensor
-from .utils import MAX_STACK, MAX_FULL_DEPTH, dict2cdf, check_tensor, Func
+from .utils import MAX_STACK, MAX_FULL_DEPTH, dict2cdf, check_tensor, FUNCS_NAMES, Func
+
+
+def check_tree_length(max_tree_len, using_funcs, max_layer_cnt, layer_leaf_prob):
+    max_operents_for_funcs = 0
+    for func in using_funcs:
+        idx = FUNCS_NAMES.index(func)
+        if idx == Func.IF:
+            max_operents_for_funcs = 3
+        elif idx <= Func.GE:
+            max_operents_for_funcs = max(max_operents_for_funcs, 2)
+        else:
+            max_operents_for_funcs = max(max_operents_for_funcs, 1)
+
+    # Size for a complete-N tree with height h
+    max_tree_len_should_be = int(
+        (max_operents_for_funcs**max_layer_cnt - 1) / (max_operents_for_funcs - 1)
+    )
+
+    assert max_tree_len >= max_tree_len_should_be, (
+        f"max_tree_len={max_tree_len} is too small\n"
+        f"max_tree_len should >={max_tree_len_should_be}\n"
+        f"as the max arity of funcs is {max_operents_for_funcs} and the max layer is {max_layer_cnt}."
+    )
+
+    non_leaf_layer_cnt = max_layer_cnt - 1
+    depth2leaf_probs = torch.tensor(
+        [layer_leaf_prob] * non_leaf_layer_cnt
+        + [1.0] * (MAX_FULL_DEPTH - non_leaf_layer_cnt),
+        device="cuda",
+    )
+    return depth2leaf_probs
 
 
 class GenerateDiscriptor:
@@ -53,15 +84,9 @@ class GenerateDiscriptor:
             assert (
                 layer_leaf_prob is not None
             ), "layer_leaf_prob should not be None when depth2leaf_probs is None"
-            assert (
-                2**max_layer_cnt < max_tree_len
-            ), f"max_layer_cnt is too large for max_tree_len={max_tree_len}"
 
-            depth2leaf_probs = torch.tensor(
-                [layer_leaf_prob] * max_layer_cnt
-                + [1.0] * (MAX_FULL_DEPTH - max_layer_cnt),
-                device="cuda",
-                requires_grad=False,
+            depth2leaf_probs = check_tree_length(
+                max_tree_len, using_funcs, max_layer_cnt, layer_leaf_prob
             )
 
         if roulette_funcs is None:
