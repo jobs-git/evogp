@@ -28,8 +28,10 @@ typedef enum Function
 	ADD, // arity: 2, return a + b
 	SUB, // arity: 2, return a - b
 	MUL, // arity: 2, return a * b
-	DIV, // arity: 2, if (|b| < DELTA) { return a / DELTA * sign(b) } return a / b
-	POW, // arity: 2, |a|^b
+	DIV, // arity: 2, return a / b
+	LOOSE_DIV, // arity: 2, if (|b| < DELTA) { return a / DELTA * sign(b) } return a / b
+	POW, // arity: 2, return a^b
+	LOOSE_POW, // arity: 2, |a|^b
 	MAX, // arity: 2, if (a > b) { return a } return b
 	MIN, // arity: 2, if (a < b) { return a } return b
 	LT,  // arity: 2, if (a < b) { return 1 } return -1
@@ -42,15 +44,14 @@ typedef enum Function
 	SINH,// arity: 1, return sinh(a)
 	COSH,// arity: 1, return cosh(a)
 	TANH,// arity: 1, return tanh(a)
-	LOG, // arity: 1, return if (a == 0) { return -MAX_VAL } return log(|a|)
-	EXP, // arity: 1, return min(exp(a), MAX_VAL)
-	INV, // arity: 1, if (|a| < DELTA) { return 1 / DELTA * sign(a) } return 1 / a
+	LOG, // arity: 1, return log(a)
+	LOOSE_LOG, // arity: 1, return if (a == 0) { return -MAX_VAL } return log(|a|)
+	EXP, // arity: 1, exp(a)
+	INV, // arity: 1, return 1 / a
+	LOOSE_INV, // arity: 1, if (|a| < DELTA) { return 1 / DELTA * sign(a) } return 1 / a
 	NEG, // arity: 1, return -a
 	ABS, // arity: 1, return |a|
-	SQRT,// arity: 1, return sqrt(|a|)
+	SQRT, // arity: 1, return sqrt(a)
+	LOOSE_SQRT,// arity: 1, return sqrt(|a|)
 	END  // not used, the ending notation
 } func_t;
-
-/* ALL FUNCTIONS:
-* [IF, ADD, SUB, MUL, DIV, POW, MAX, MIN, LT, GT, LE, GE, SIN, COS, TAN, SINH, COSH, TANH, LOG, EXP, INV, NEG, ABS, SQRT]
-*/

@@ -37,27 +37,32 @@ class Func:
     SUB = 2
     MUL = 3
     DIV = 4
-    POW = 5
-    MAX = 6
-    MIN = 7
-    LT = 8
-    GT = 9
-    LE = 10
-    GE = 11
+    LOOSE_DIV = 5
+    POW = 6
+    LOOSE_POW = 7
+    MAX = 8
+    MIN = 9
+    LT = 10
+    GT = 11
+    LE = 12
+    GE = 13
 
-    SIN = 12
-    COS = 13
-    TAN = 14
-    SINH = 15
-    COSH = 16
-    TANH = 17
-    LOG = 18
-    EXP = 19
-    INV = 20
-    NEG = 21
-    ABS = 22
-    SQRT = 23
-    END = 24
+    SIN = 14
+    COS = 15
+    TAN = 16
+    SINH = 17
+    COSH = 18
+    TANH = 19
+    LOG = 20
+    LOOSE_LOG = 21
+    EXP = 22
+    INV = 23
+    LOOSE_INV = 24
+    NEG = 25
+    ABS = 26
+    SQRT = 27
+    LOOSE_SQRT = 28
+    END = 29
 
 
 FUNCS = [
@@ -66,7 +71,9 @@ FUNCS = [
     Func.SUB,
     Func.MUL,
     Func.DIV,
+    Func.LOOSE_DIV,
     Func.POW,
+    Func.LOOSE_POW,
     Func.MAX,
     Func.MIN,
     Func.LT,
@@ -80,69 +87,82 @@ FUNCS = [
     Func.COSH,
     Func.TANH,
     Func.LOG,
+    Func.LOOSE_LOG,
     Func.EXP,
     Func.INV,
+    Func.LOOSE_INV,
     Func.NEG,
     Func.ABS,
     Func.SQRT,
+    Func.LOOSE_SQRT,
 ]
 
 FUNCS_NAMES = [
-    "if",  # 0
-    "+",  # 1
-    "-",  # 2
-    "*",  # 3
-    "/",  # 4
-    "pow",  # 5
-    "max",  # 6
-    "min",  # 7
-    "<",  # 8
-    ">",  # 9
-    "<=",  # 10
-    ">=",  # 11
-    "sin",  # 12
-    "cos",  # 13
-    "tan",  # 14
-    "sinh",  # 15
-    "cosh",  # 16
-    "tanh",  # 17
-    "log",  # 18
-    "exp",  # 19
-    "inv",  # 20
-    "neg",  # 21
-    "abs",  # 22
-    "sqrt",  # 23
+    "if",
+    "+",
+    "-",
+    "*",
+    "/",
+    "loose_div",
+    "pow",
+    "loose_pow",
+    "max",
+    "min",
+    "<",
+    ">",
+    "<=",
+    ">=",
+    "sin",
+    "cos",
+    "tan",
+    "sinh",
+    "cosh",
+    "tanh",
+    "log",
+    "loose_log",
+    "exp",
+    "inv",
+    "loose_inv",
+    "neg",
+    "abs",
+    "sqrt",
+    "loose_sqrt",
 ]
 
 FUNCS_DISPLAY = [
-    "if",  # 0
-    "+",  # 1
-    "−",  # 2
-    "*",  # 3
-    "/",  # 4
-    "pow",  # 5
-    "max",  # 6
-    "min",  # 7
-    "<",  # 8
-    ">",  # 9
-    "<=",  # 10
-    ">=",  # 11
-    "sin",  # 12
-    "cos",  # 13
-    "tan",  # 14
-    "sinh",  # 15
-    "cosh",  # 16
-    "tanh",  # 17
-    "log",  # 18
-    "exp",  # 19
-    "inv",  # 20
-    "neg",  # 21
-    "abs",  # 22
-    "sqrt",  # 23
+    "if",
+    "+",
+    "−",
+    "*",
+    "/",
+    "loose_div",
+    "pow",
+    "loose_pow",
+    "max",
+    "min",
+    "<",
+    ">",
+    "<=",
+    ">=",
+    "sin",
+    "cos",
+    "tan",
+    "sinh",
+    "cosh",
+    "tanh",
+    "log",
+    "loose_log",
+    "exp",
+    "inv",
+    "loose_inv",
+    "neg",
+    "abs",
+    "sqrt",
+    "loose_sqrt",
 ]
 
 
-class EvoGPDiv(sp.Function):
+class LooseDiv(sp.Function):
     @classmethod
     def eval(cls, x, y):
         if isinstance(y, (float, int)) and y == 0:
@@ -152,7 +172,7 @@ class EvoGPDiv(sp.Function):
         return x / y
 
 
-class EvoGPInv(sp.Function):
+class LooseInv(sp.Function):
     @classmethod
     def eval(cls, x):
         if isinstance(x, (float, int)) and x == 0:
@@ -162,7 +182,7 @@ class EvoGPInv(sp.Function):
         return 1 / x
 
 
-class EvoGPLog(sp.Function):
+class LooseLog(sp.Function):
     @classmethod
     def eval(cls, x):
         if isinstance(x, (float, int)) and x == 0:
@@ -177,8 +197,10 @@ SYMPY_MAP = {
     Func.ADD: lambda x, y: x + y,
     Func.SUB: lambda x, y: x - y,
     Func.MUL: lambda x, y: x * y,
-    Func.DIV: EvoGPDiv,
-    Func.POW: lambda x, y: sp.Abs(x) ** y,
+    Func.DIV: lambda x, y: x / y,
+    Func.LOOSE_DIV: LooseDiv,
+    Func.POW: sp.POW,
+    Func.LOOSE_POW: lambda x, y: sp.Pow(sp.Abs(x), y),
     Func.MAX: sp.Max,
     Func.MIN: sp.Min,
     Func.LT: lambda x, y: x < y,
@@ -191,12 +213,15 @@ SYMPY_MAP = {
     Func.SINH: sp.sinh,
     Func.COSH: sp.cosh,
     Func.TANH: sp.tanh,
-    Func.LOG: EvoGPLog,
+    Func.LOG: sp.log,
+    Func.LOOSE_LOG: LooseLog,
     Func.EXP: sp.exp,
-    Func.INV: EvoGPInv,
+    Func.INV: lambda x: 1 / x,
+    Func.LOOSE_INV: LooseInv,
     Func.NEG: lambda x: -x,
     Func.ABS: sp.Abs,
-    Func.SQRT: lambda x: sp.sqrt(sp.Abs(x)),
+    Func.SQRT: sp.sqrt,
+    Func.LOOSE_SQRT: lambda x: sp.sqrt(sp.Abs(x)),
     Func.END: None,
 }
 

@@ -1,5 +1,6 @@
 import time
 import numpy as np
+import torch
 
 from ..algorithm import GeneticProgramming
 from ..problem import BaseProblem
@@ -36,6 +37,9 @@ class StandardPipeline(BasePipeline):
     def step(self):
         # evaluate fitness
         fitnesses = self.problem.evaluate(self.algorithm.forest)
+        
+        # transfer nan value in fitnesses to -inf
+        fitnesses[torch.isnan(fitnesses)] = -torch.inf
 
         # update best tree info
         cpu_fitness = fitnesses.cpu().numpy()

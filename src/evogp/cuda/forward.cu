@@ -1,5 +1,7 @@
 #include "kernel.h"
 #include <stdio.h>
+#include <cmath>
+
 // #include <thrust/execution_policy.h>
 // #include <thrust/reduce.h>
 
@@ -88,7 +90,10 @@ __device__ inline void _process_node(
 		{
 			top_val = std::tanh(var1);
 		}
-		else if (function == Function::LOG)
+		else if(function == Function::LOG){
+			top_val = std::log(var1);
+		}
+		else if (function == Function::LOOSE_LOG)
 		{
 			if (var1 == 0.0f)
 			{
@@ -99,7 +104,13 @@ __device__ inline void _process_node(
 				top_val = std::log(std::abs(var1));
 			}
 		}
-		else if (function == Function::INV)
+		else if (function == Function::INV){
+			if (var1 == 0.0f){
+				top_val = NAN;
+			}
+			else top_val = 1.0f / var1;
+		}
+		else if (function == Function::LOOSE_INV)
 		{
 			if (std::abs(var1) <= DELTA)
 			{
@@ -120,6 +131,10 @@ __device__ inline void _process_node(
 			top_val = std::abs(var1);
 		}
 		else if (function == Function::SQRT)
+		{
+			top_val = std::sqrt(var1);
+		}
+		else if (function == Function::LOOSE_SQRT)
 		{
 			if (var1 <= 0.0f)
 			{
@@ -149,7 +164,13 @@ __device__ inline void _process_node(
 		{
 			top_val = var1 * var2;
 		}
-		else if (function == Function::DIV)
+		else if (function == Function::DIV){
+			if (var2 == 0.0f){
+				top_val = NAN;
+			}
+			else top_val = var1 / var2;
+		}
+		else if (function == Function::LOOSE_DIV)
 		{
 			if (std::abs(var2) <= DELTA)
 			{
@@ -157,7 +178,10 @@ __device__ inline void _process_node(
 			}
 			top_val = var1 / var2;
 		}
-		else if (function == Function::POW)
+		else if (function == Function::POW){
+			top_val = std::pow(var1, var2);
+		}
+		else if (function == Function::LOOSE_POW)
 		{
 			if (var1 == 0.0f && var2 == 0.0f)
 			{
@@ -206,14 +230,14 @@ __device__ inline void _process_node(
 	}
 
 	// clip value
-	if (is_nan(top_val))
-	{
-		top_val = .0f;
-	}
-	else if (is_inf(top_val) || std::abs(top_val) > MAX_VAL)
-	{	
-		top_val = copy_sign(MAX_VAL, top_val);
-	}
+	// if (is_nan(top_val))
+	// {
+	// 	top_val = .0f;
+	// }
+	// else if (is_inf(top_val) || std::abs(top_val) > MAX_VAL)
+	// {	
+	// 	top_val = copy_sign(MAX_VAL, top_val);
+	// }
 
 	// multiple output
 	if constexpr (multiOutput)
