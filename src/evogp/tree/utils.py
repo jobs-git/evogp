@@ -192,7 +192,7 @@ SYMPY_MAP = {
     Func.COSH: sp.cosh,
     Func.TANH: sp.tanh,
     Func.LOG: EvoGPLog,
-    Func.EXP: lambda x: sp.Min(sp.exp(x), MAXVAL),
+    Func.EXP: sp.exp,
     Func.INV: EvoGPInv,
     Func.NEG: lambda x: -x,
     Func.ABS: sp.Abs,
