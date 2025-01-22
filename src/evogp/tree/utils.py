@@ -199,7 +199,7 @@ SYMPY_MAP = {
     Func.MUL: lambda x, y: x * y,
     Func.DIV: lambda x, y: x / y,
     Func.LOOSE_DIV: LooseDiv,
-    Func.POW: sp.POW,
+    Func.POW: sp.Pow,
     Func.LOOSE_POW: lambda x, y: sp.Pow(sp.Abs(x), y),
     Func.MAX: sp.Max,
     Func.MIN: sp.Min,

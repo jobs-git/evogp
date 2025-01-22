@@ -26,6 +26,7 @@ class Classification(BaseProblem):
             ), "dataset must be provided when datapoints and labels are not provided"
             self.datapoints, self.labels = self.generate_data(dataset)
 
+        self.maximum = int(torch.max(self.labels))
         self.onehot_labels = torch.zeros(
             self.labels.size(0), self.maximum + 1, device="cuda"
         )
@@ -44,7 +45,6 @@ class Classification(BaseProblem):
             raise ValueError("Invalid dataset")
         inputs = torch.tensor(X, dtype=torch.float32, device="cuda")
         labels = torch.tensor(y, dtype=torch.float32, device="cuda")
-        self.maximum = int(torch.max(labels))
         return inputs, labels
 
     def transform(self, x: Tensor):

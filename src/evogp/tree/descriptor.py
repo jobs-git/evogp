@@ -17,9 +17,12 @@ def check_tree_length(max_tree_len, using_funcs, max_layer_cnt, layer_leaf_prob)
             max_operents_for_funcs = max(max_operents_for_funcs, 1)
 
     # Size for a complete-N tree with height h
-    max_tree_len_should_be = int(
-        (max_operents_for_funcs**max_layer_cnt - 1) / (max_operents_for_funcs - 1)
-    )
+    if max_operents_for_funcs > 1:
+        max_tree_len_should_be = int(
+            (max_operents_for_funcs**max_layer_cnt - 1) / (max_operents_for_funcs - 1)
+        )
+    else:
+        max_tree_len_should_be = max_layer_cnt
 
     assert max_tree_len >= max_tree_len_should_be, (
         f"max_tree_len={max_tree_len} is too small\n"
@@ -152,3 +155,15 @@ class GenerateDiscriptor:
     def update(self, **kwargs):
         self.__params.update(kwargs)
         return self.__class__(**self.__params)
+
+    def __str__(self):
+        return (
+            f"max_tree_len: {self.max_tree_len}\n"
+            f"input_len: {self.input_len}\n"
+            f"output_len: {self.output_len}\n"
+            f"const_prob: {self.const_prob}\n"
+            f"out_prob: {self.out_prob}\n"
+            f"depth2leaf_probs: {self.depth2leaf_probs}\n"
+            f"roulette_funcs: {self.roulette_funcs}\n"
+            f"const_samples: {self.const_samples}\n"
+        )

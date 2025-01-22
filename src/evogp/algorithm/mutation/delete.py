@@ -17,15 +17,12 @@ class DeleteMutation(BaseMutation):
     def __init__(
         self,
         mutation_rate: float,
-        generate_configs: dict,
     ):
         """
         Args:
             mutation_rate (float): The probability of each individual undergoing mutation. Should be between 0 and 1.
-            generate_configs (dict): Configuration dictionary for subtree generation (used in mutation).
         """
         self.mutation_rate = mutation_rate
-        self.generate_configs = generate_configs
 
     def __call__(self, forest: Forest):
         """
