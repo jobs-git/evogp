@@ -252,7 +252,7 @@ class Tree:
             [self.node_value, self.node_type, self.subtree_size]
         )
         tree_size = subtree_size[0]
-        x = sp.symbols(f"x0:{self.input_len}")
+        x = sp.symbols(f"x0:{self.input_len}", real=True)
         tree_size = subtree_size[0]
         operents = []
         for i in range(tree_size - 1, -1, -1):
