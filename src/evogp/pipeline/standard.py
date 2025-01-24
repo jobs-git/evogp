@@ -19,8 +19,8 @@ class StandardPipeline(BasePipeline):
         valid_fitness_boundry: float = 1e8,
     ):
 
-        assert algorithm.forest.input_len == problem.problem_dim
-        assert algorithm.forest.output_len == problem.solution_dim
+        # assert algorithm.forest.input_len == problem.problem_dim
+        # assert algorithm.forest.output_len == problem.solution_dim
 
         self.algorithm = algorithm
         self.problem = problem

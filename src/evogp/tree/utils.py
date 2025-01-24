@@ -320,9 +320,9 @@ def randint(size, low, high, dtype=torch.int64, device="cuda", requires_grad=Fal
     return random.to(dtype=dtype)
 
 
-def check_formula(formula):
-    assert isinstance(formula, Callable), "formula should be Callable"
-    sig = inspect.signature(formula)
+def inspect_function(func):
+    assert isinstance(func, Callable), "formula should be Callable"
+    sig = inspect.signature(func)
     parameters = sig.parameters
     assert len(parameters) > 0, "formula should have at least one parameter"
     for name, param in parameters.items():

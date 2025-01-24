@@ -6,7 +6,6 @@ import numpy as np
 
 from evogp.tree.utils import check_tensor
 
-from .utils import check_formula
 from .forest import Forest
 from .descriptor import GenerateDiscriptor
 from .combined_tree import CombinedTree
@@ -15,113 +14,83 @@ from .combined_tree import CombinedTree
 class CombinedForest:
     def __init__(
         self,
-        formula: Callable,
         forests: List[Forest],
-        share_input: bool = True,
+        data_info: dict,
     ):
-        self.parameter_names = check_formula(formula)
-        self.formula = formula
+        self.data_info = data_info
         self.forests = forests
-        self.input_len = (
-            forests[0].input_len
-            if share_input
-            else sum([f.input_len for f in forests])
-        )
-        self.output_len = forests[0].output_len
-        for forest in forests:
-            assert (
-                forest.output_len == self.output_len
-            ), f"all forests should have the same output_len, but got {forest.output_len} and {self.output_len}"
+        self.output_names = list(data_info.keys())
+        self.input_names = []
+        for vals in data_info.values():
+            self.input_names.extend(vals)
+        self.input_names = list(set(self.input_names))
+
+        self.input_len = len(self.input_names)
+        self.output_len = len(self.output_names)
 
         self.pop_size = forests[0].pop_size
-        self.share_input = share_input
 
     @staticmethod
     def random_generate(
         pop_size: int,
-        formula: Callable,
+        data_info: dict,
         descriptors: Union[List, GenerateDiscriptor],
-        share_input: bool = True,
     ):
-        parameter_names = check_formula(formula)
         if isinstance(descriptors, GenerateDiscriptor):
-            descriptors = [descriptors] * len(parameter_names)
+            descriptors = [descriptors] * len(data_info)
+
         assert isinstance(descriptors, list) and len(descriptors) == len(
-            parameter_names
-        ), f"there are {len(parameter_names)} parameters, but got {len(descriptors)} descriptors"
+            data_info
+        ), f"there are {len(data_info)} sub_forests, but got {len(descriptors)} descriptors"
+
+        for i, (key, vals) in enumerate(data_info.items()):
+            # check input_len
+            assert descriptors[i].input_len == len(vals), "input size not match"
+            # check output_len
+            assert descriptors[i].output_len == 1, "output size mush be 1"
+
         forests = [
             Forest.random_generate(pop_size=pop_size, descriptor=d) for d in descriptors
         ]
-        return CombinedForest(formula=formula, forests=forests, share_input=share_input)
+
+        return CombinedForest(
+            forests=forests,
+            data_info=data_info,
+        )
 
     # (pop_size, input_len) -> (pop_size, output_len)
     def forward(
         self,
-        x: Union[torch.Tensor, List[torch.Tensor]],
+        x: dict[str, torch.Tensor],
     ):
-        if self.share_input:
-            assert not isinstance(
-                x, list
-            ), "x should not be a list when share_input=True"
-            x = [x] * len(self.forests)
-        else:
-            assert isinstance(x, list), "x should be a list when share_input=False"
-            assert len(x) == len(
-                self.forests
-            ), "x should have the same length as forests"
-            for i in x:
-                assert (
-                    x[i].shape[0] == self.pop_size
-                ), f"len(x) should be equal to pop_size, but got {x[i].shape[0]} and {self.pop_size}"
+        outputs = {}
+        for i, f in enumerate(self.forests):
+            out_name = self.output_names[i]
+            inputs = [x[name][:, None] for name in self.data_info[out_name]]
+            inputs_torch = torch.cat(inputs, dim=1)
+            outputs[out_name] = f.forward(inputs_torch)
 
-        pop_outputs = []
-        for i, forest in enumerate(self.forests):
-            inputs = check_tensor(x[i])
-            pop_outputs.append(forest.forward(inputs))
-
-        # redundant check
-        for o in pop_outputs:
-            assert o.shape == (self.pop_size, self.output_len)
-
-        return self.formula(*pop_outputs)
+        return outputs
 
     # (batch_size, input_len) -> (pop_size, batch_size, output_len)
-    def batch_forward(self, x: Union[torch.Tensor, List[torch.Tensor]]):
-        if self.share_input:
-            assert not isinstance(
-                x, list
-            ), "x should not be a list when share_input=True"
-            batch_size = x.shape[0]
-            x = [x] * len(self.forests)
+    def batch_forward(
+        self,
+        x: dict[str, torch.Tensor],
+    ):
+        outputs = {}
+        for i, f in enumerate(self.forests):
+            out_name = self.output_names[i]
+            inputs = [x[name][:, None] for name in self.data_info[out_name]]
+            inputs_torch = torch.cat(inputs, dim=1)
+            outputs[out_name] = f.batch_forward(inputs_torch)
 
-        else:
-            assert isinstance(x, list), "x should be a list when share_input=False"
-            assert len(x) == len(
-                self.forests
-            ), "x should have the same length as forests"
-            batch_size = x[0].shape[0]
-            for i in range(1, len(x)):
-                assert (
-                    x[i].shape[0] == batch_size
-                ), f"x should have the same batch_size, but got {x[i].shape[0]} and {x[0].shape[0]}"
-
-        pop_outputs = []
-        for i, forest in enumerate(self.forests):
-            inputs = check_tensor(x[i])
-            pop_outputs.append(forest.batch_forward(inputs))
-        
-        # redundant check
-        for o in pop_outputs:
-            assert o.shape == (self.pop_size, batch_size, self.output_len), o.shape
-
-        return self.formula(*pop_outputs)
+        return outputs
 
     def __getitem__(self, index):
         if isinstance(index, int):
             return CombinedTree(
-                formula=self.formula,
+                data_info=self.data_info,
                 trees=[f[index] for f in self.forests],
-                share_input=self.share_input,
             )
         elif (
             isinstance(index, slice)
@@ -129,9 +98,8 @@ class CombinedForest:
             or isinstance(index, np.ndarray)
         ):
             return CombinedForest(
-                formula=self.formula,
+                data_info=self.data_info,
                 forests=[f[index] for f in self.forests],
-                share_input=self.share_input,
             )
         else:
             raise Exception("Do not support index type {}".format(type(index)))
@@ -171,26 +139,17 @@ class CombinedForest:
         return self.pop_size
 
     def __add__(self, other):
-        assert self.formula == other.formula
-        assert self.share_input == other.share_input
+        assert self.data_info == other.data_info
         if isinstance(other, CombinedForest):
             new_forests = []
             for i in range(len(self.forests)):
                 new_forests.append(self.forests[i] + other.forests[i])
-            return CombinedForest(
-                self.formula,
-                new_forests,
-                self.share_input,
-            )
+            return CombinedForest(new_forests, self.data_info)
         if isinstance(other, CombinedTree):
             new_forests = []
             for i in range(len(self.forests)):
                 new_forests.append(self.forests[i] + other.tree[i])
-            return CombinedForest(
-                self.formula,
-                new_forests,
-                self.share_input,
-            )
+            return CombinedForest(new_forests, self.data_info)
         else:
             raise NotImplementedError
 

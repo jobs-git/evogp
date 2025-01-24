@@ -1,59 +1,41 @@
-from typing import Optional, Tuple, Callable, List, Tuple, Union
-import warnings
+from typing import List, Union
 import torch
-from torch import Tensor
-import sympy as sp
 
-from .utils import check_formula
 from .descriptor import GenerateDiscriptor
-from .combined_forest import check_formula
 
 
 class CombinedTree:
-    def __init__(self, formula, trees, share_input: bool = True):
-        self.parameter_names = check_formula(formula)
-        self.formula = formula
+    def __init__(self, trees, data_info):
         self.trees = trees
-        self.input_len = (
-            trees[0].input_len
-            if share_input
-            else sum([tree.input_len for tree in trees])
-        )
-        self.output_len = trees[0].output_len
-        for tree in trees:
-            assert (
-                tree.output_len == self.output_len
-            ), f"all forests should have the same output_len, but got {tree.output_len} and {self.output_len}"
+        self.data_info = data_info
+        self.output_names = list(data_info.keys())
+        self.input_names = []
+        for vals in data_info.values():
+            self.input_names.extend(vals)
+        self.input_names = list(set(self.input_names))
 
-        self.share_input = share_input
+        self.input_len = len(self.input_names)
+        self.output_len = len(self.output_names)
 
-        for i, parameter in enumerate(self.parameter_names):
-            setattr(self, parameter, trees[i])
+        for i, names in enumerate(self.output_names):
+            setattr(self, names, self.trees[i])
 
     @staticmethod
     def random_generate(
-        formula: Callable,
         descriptors: Union[List, GenerateDiscriptor],
-        share_input: bool = True,
+        data_info: dict,
     ):
         from .combined_forest import CombinedForest
 
         return CombinedForest.random_generate(
             pop_size=1,
-            formula=formula,
             descriptors=descriptors,
-            share_input=share_input,
+            data_info=data_info,
         )[0]
 
-    def forward(self, x):
-        if self.share_input:
-            assert not isinstance(
-                x, list
-            ), "x should not be a list when share_input=True"
-            is_batch = x.dim() == 2  # (batch_size, input_len)
-        else:
-            assert isinstance(x, list), "x should be a list when share_input=False"
-            is_batch = x[0].dim() == 2  # (batch_size, input_len)
+    def forward(self, x: dict[str, torch.Tensor]):
+
+        is_batch = list(x.values())[0].dim() == 2
 
         if not is_batch:
             pop_res = self.to_combined_forest().forward(x)
@@ -66,18 +48,6 @@ class CombinedTree:
         from .combined_forest import CombinedForest
 
         return CombinedForest(
-            formula=self.formula,
             forests=[tree.to_forest() for tree in self.trees],
-            share_input=self.share_input,
+            data_info=self.data_info,
         )
-
-    def to_sympy_expr(self, sympy_formula=None):
-        if sympy_formula is None:
-            warnings.warn(
-                "sympy_formula is None, using default formula", RuntimeWarning
-            )
-            sympy_formula = self.formula
-
-        sub_exprs = [t.to_sympy_expr() for t in self.trees]
-
-        return sympy_formula(*sub_exprs)

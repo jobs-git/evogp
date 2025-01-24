@@ -28,7 +28,7 @@ class CombinedDefaultMutation(BaseMutation):
             new_forests.append(self.default_mutations[i](combined_forest.forests[i]))
 
         return CombinedForest(
-            combined_forest.formula, new_forests, combined_forest.share_input
+            new_forests, combined_forest.data_info
         )
 
     def load_pattern_num(self, current_pattern_num):

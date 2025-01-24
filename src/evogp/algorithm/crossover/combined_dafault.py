@@ -50,5 +50,5 @@ class CombinedDefaultCrossover(BaseCrossover):
             )
 
         return CombinedForest(
-            forest.formula, new_forest, forest.share_input
+            new_forest, forest.data_info
         )
