@@ -45,7 +45,7 @@ descriptor = GenerateDiscriptor(
 # create the algorithm
 algorithm = GeneticProgramming(
     initial_forest=CombinedForest.random_generate(
-        formula=lambda A, B: A + B,
+        formula=lambda A, B, C: A + B * C,
         pop_size=5000,
         descriptors=descriptor,
         share_input=True,
@@ -68,7 +68,8 @@ best = pipeline.run()
 pred_res = best.forward(XOR_INPUTS)
 print(pred_res)
 
-# sympy_expression = best.to_sympy_expr()
-# print(sympy_expression)
+print(best.A.to_sympy_expr())
+print(best.B.to_sympy_expr())
+print(best.C.to_sympy_expr())
 
-# best.to_png("./imgs/xor_tree.png")
+print(best.to_sympy_expr(lambda A, B, C: A + B * C))
