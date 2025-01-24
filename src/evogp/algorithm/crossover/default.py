@@ -50,7 +50,7 @@ class DefaultCrossover(BaseCrossover):
         tree_sizes = survivor_forest.batch_subtree_size[:, 0]
         left_pos_unlimited, right_pos_unlimited = torch.randint(
             low=0,
-            high=MAX_STACK,
+            high=torch.iinfo(torch.int32).max,
             size=(2, target_cnt),
             dtype=torch.int32,
             device="cuda",

@@ -128,6 +128,17 @@ class Tree:
 
         return res
 
+    def to_forest(self):
+        from .forest import Forest
+
+        return Forest(
+            self.input_len,
+            self.output_len,
+            self.node_value[None, :],
+            self.node_type[None, :],
+            self.subtree_size[None, :],
+        )
+
     def __str__(self):
         value, node_type, subtree_size = to_numpy(
             [self.node_value, self.node_type, self.subtree_size]
@@ -276,5 +287,5 @@ class Tree:
                     res = SYMPY_MAP[int(v)](left, mid, right)
 
                 operents.append(res)
-        
+
         return operents[0]

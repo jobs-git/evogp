@@ -3,7 +3,7 @@ from typing import Optional, Callable
 import torch
 from torch import Tensor
 from . import BaseProblem
-from evogp.tree import Forest
+from evogp.tree import Forest, CombinedForest
 
 
 class SymbolicRegression(BaseProblem):
@@ -68,6 +68,11 @@ class SymbolicRegression(BaseProblem):
         use_MSE: bool = True,
 
     ):
+        if isinstance(forest, CombinedForest):
+            assert self.execute_mode == "torch", "execute_mode should be 'torch' when using CombinedForest"
+            if not forest.share_input:
+                assert False, "Currently, combinedForest with share_input=False is not supported"
+
         if self.execute_mode == "torch":
             # shape (pop_size, datapoints, output_len)
             pred = forest.batch_forward(self.datapoints)

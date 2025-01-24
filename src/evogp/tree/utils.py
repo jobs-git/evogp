@@ -1,3 +1,5 @@
+import inspect
+from typing import Callable
 import numpy as np
 import torch
 import sympy as sp
@@ -316,3 +318,16 @@ def randint(size, low, high, dtype=torch.int64, device="cuda", requires_grad=Fal
         high - low
     )
     return random.to(dtype=dtype)
+
+
+def check_formula(formula):
+    assert isinstance(formula, Callable), "formula should be Callable"
+    sig = inspect.signature(formula)
+    parameters = sig.parameters
+    assert len(parameters) > 0, "formula should have at least one parameter"
+    for name, param in parameters.items():
+        assert (
+            param.default is inspect.Parameter.empty
+        ), f"formula should not have default parameters, but got {name}={param.default}"
+
+    return list(parameters.keys())

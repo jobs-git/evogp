@@ -102,7 +102,7 @@ class Forest:
 
         res = torch.ops.evogp_cuda.tree_evaluate(
             self.pop_size,
-            self.max_tree_len, 
+            self.max_tree_len,
             self.input_len,
             self.output_len,
             self.batch_node_value,
@@ -113,6 +113,7 @@ class Forest:
 
         return res
 
+    # (batch_size, input_len) -> (pop_size, batch_size, output_len)
     def batch_forward(self, x: Tensor) -> Tensor:
         x = check_tensor(x)
 
@@ -139,7 +140,7 @@ class Forest:
             self.input_len,
             self.output_len,
             assist_batch_node_value,
-            assist_batch_node_type,  
+            assist_batch_node_type,
             assist_batch_subtree_size,
             assist_x,
         )
@@ -417,6 +418,9 @@ class Forest:
         return self.pop_size
 
     def __add__(self, other):
+        assert other.input_len == self.input_len
+        assert other.output_len == self.output_len
+            
         if isinstance(other, Forest):
             return Forest(
                 self.input_len,

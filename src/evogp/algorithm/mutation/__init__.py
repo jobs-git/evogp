@@ -8,3 +8,4 @@ from .single_const import SingleConstMutation
 from .multi_point import MultiPointMutation
 from .multi_const import MultiConstMutation
 from .combined import CombinedMutation
+from .combined_default import CombinedDefaultMutation
