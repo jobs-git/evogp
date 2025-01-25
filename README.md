@@ -34,10 +34,10 @@
 
 # Table of Contents
 # Table of Contents
-[Installation](#installation)
-[Basic API Usage](#basic-api-usage)
-[Advanced Genetic Operations](#advanced-genetic-operations)
-[Supported Benchmarks](#supported-benchmarks)
+ [Installation](#installation)
+ [Basic API Usage](#basic-api-usage)
+ [Advanced Genetic Operations](#advanced-genetic-operations)
+ [Supported Benchmarks](#supported-benchmarks)
   - [Symbolic Regression](#symbolic-regression)
   - [Classification](#classification)
   - [Transformation](#transformation)
