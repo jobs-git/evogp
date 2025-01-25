@@ -3,7 +3,7 @@ import torch
 from torch import Tensor
 
 from .base import BaseMutation
-from ...tree import Forest, MAX_STACK, randint, NType
+from ...tree import Forest, MAX_STACK, randint, NType, GenerateDiscriptor
 
 
 class MultiPointMutation(BaseMutation):
@@ -17,18 +17,18 @@ class MultiPointMutation(BaseMutation):
     def __init__(
         self,
         mutation_rate: float,
-        generate_configs: dict,
+        descriptor: GenerateDiscriptor,
         mutation_intensity: float = 0.3,
     ):
         """
         Args:
             mutation_rate (float): The probability of each individual undergoing mutation.
-            generate_configs (dict): Configuration dictionary for random node generation.
+            descriptor (GenerateDiscriptor): The descriptor used to generate random subtrees for mutation.
             mutation_intensity (float): Determines the proportion of nodes in the tree that will be mutated. 
                                         It is a fraction between 0 and 1.
         """
         self.mutation_rate = mutation_rate
-        self.generate_configs = generate_configs
+        self.descriptor = descriptor
         self.mutation_intensity = mutation_intensity
 
     def __call__(self, forest: Forest):
@@ -76,11 +76,11 @@ class MultiPointMutation(BaseMutation):
         # Randomly generate constant values for the mutation
         random_idx = torch.randint(
             low=0,
-            high=self.generate_configs["const_samples"].shape[0],
+            high=self.descriptor.const_samples.shape[0],
             size=(num_targets,),
             device="cuda",
         )
-        random_const = self.generate_configs["const_samples"][random_idx]
+        random_const = self.descriptor.const_samples[random_idx]
 
         # Randomly generate other types of node values based on the mutated node type
         mutated_node_type = forest_to_mutate.batch_node_type[mutation_targets]

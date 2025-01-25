@@ -15,10 +15,10 @@ class CombinedMutation(BaseMutation):
     Example:
         CombinedMutation(
             [
-                DefaultMutation(mutation_rate=0.2, generate_configs=generate_configs),
+                DefaultMutation(mutation_rate=0.2, descriptor=descriptor),
                 HoistMutation(mutation_rate=0.2),
                 MultiPointMutation(mutation_rate=0.2, mutation_intensity=0.3),
-                InsertMutation(mutation_rate=0.2, generate_configs=generate_configs),
+                InsertMutation(mutation_rate=0.2, descriptor=descriptor),
             ]
         )
     """

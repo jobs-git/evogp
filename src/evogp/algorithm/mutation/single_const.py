@@ -3,7 +3,7 @@ import torch
 from torch import Tensor
 
 from .base import BaseMutation
-from ...tree import Forest, MAX_STACK, NType
+from ...tree import Forest, MAX_STACK, NType, GenerateDiscriptor
 
 
 class SingleConstMutation(BaseMutation):
@@ -16,15 +16,15 @@ class SingleConstMutation(BaseMutation):
     def __init__(
         self,
         mutation_rate: float,
-        generate_configs: dict,
+        descriptor: GenerateDiscriptor,
     ):
         """
         Args:
             mutation_rate (float): The probability of each individual undergoing mutation.
-            generate_configs (dict): Configuration dictionary for generating random constant values.
+            descriptor (GenerateDiscriptor): The descriptor used to generate random subtrees for mutation.
         """
         self.mutation_rate = mutation_rate
-        self.generate_configs = generate_configs
+        self.descriptor = descriptor
 
     def __call__(self, forest: Forest):
         """
@@ -78,11 +78,11 @@ class SingleConstMutation(BaseMutation):
         # Randomly generate new constant values for mutation
         random_idx = torch.randint(
             low=0,
-            high=self.generate_configs["const_samples"].shape[0],
+            high=self.descriptor.const_samples.shape[0],
             size=(num_mutate,),
             device="cuda",
         )
-        random_const = self.generate_configs["const_samples"][random_idx]
+        random_const = self.descriptor.const_samples[random_idx]
 
         # Mutate the selected constant nodes in the trees
         mutated_node_type = forest_to_mutate.batch_node_type[

@@ -3,7 +3,7 @@ import torch
 from torch import Tensor
 
 from .base import BaseMutation
-from ...tree import Forest, MAX_STACK, NType
+from ...tree import Forest, MAX_STACK, NType, GenerateDiscriptor
 
 
 class MultiConstMutation(BaseMutation):
@@ -17,18 +17,18 @@ class MultiConstMutation(BaseMutation):
     def __init__(
         self,
         mutation_rate: float,
-        generate_configs: dict,
+        descriptor: GenerateDiscriptor,
         mutation_intensity: float = 0.3,
     ):
         """
         Args:
             mutation_rate (float): The probability of each individual undergoing mutation.
-            generate_configs (dict): Configuration dictionary for generating random constant values.
+            descriptor (GenerateDiscriptor): The descriptor used to generate random subtrees for mutation.
             mutation_intensity (float): The proportion of constant nodes in the tree that will be mutated. 
                                         It is a fraction between 0 and 1.
         """
         self.mutation_rate = mutation_rate
-        self.generate_configs = generate_configs
+        self.descriptor = descriptor
         self.mutation_intensity = mutation_intensity
 
     def __call__(self, forest: Forest):
@@ -82,11 +82,11 @@ class MultiConstMutation(BaseMutation):
         # Randomly generate new constant values for the mutation targets
         random_idx = torch.randint(
             low=0,
-            high=self.generate_configs["const_samples"].shape[0],
+            high=self.descriptor.const_samples.shape[0],
             size=(num_targets,),
             device="cuda",
         )
-        random_const = self.generate_configs["const_samples"][random_idx]
+        random_const = self.descriptor.const_samples[random_idx]
 
         # Mutate the constant nodes by replacing them with new constant values
         forest_to_mutate.batch_node_value[mutation_targets] = random_const
