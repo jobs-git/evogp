@@ -255,7 +255,7 @@ class Tree:
         agraph.draw(fname, format="png", prog="dot")
         agraph.close()
 
-    def to_sympy_expr(self):
+    def to_sympy_expr(self, symbol_names=None):
         assert (
             self.output_len == 1
         ), "Currently, only support single output tree to sympy expression."
@@ -263,7 +263,10 @@ class Tree:
             [self.node_value, self.node_type, self.subtree_size]
         )
         tree_size = subtree_size[0]
-        x = sp.symbols(f"x0:{self.input_len}", real=True)
+        if symbol_names is not None:
+            x = sp.symbols(symbol_names, real=True)
+        else:
+            x = sp.symbols(f"x0:{self.input_len}", real=True)
         tree_size = subtree_size[0]
         operents = []
         for i in range(tree_size - 1, -1, -1):
