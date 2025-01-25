@@ -32,7 +32,7 @@
   </a>
 </p>
 
-# Table of Contents
+## Table of Contents
 - [Installation](#installation)
 - [Basic API Usage](#basic-api-usage)
 - [Advanced Genetic Operations](#advanced-genetic-operations)
