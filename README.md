@@ -33,12 +33,10 @@
 </p>
 
 # Table of Contents
-1. [Introduction](#introduction)
-2. [Key Features](#key-features)
-3. [Installation](#installation)
-4. [Basic API Usage](#basic-api-usage)
-5. [Advanced Genetic Operations](#advanced-genetic-operations)
-6. [Supported Benchmarks](#supported-benchmarks)
+1. [Installation](#installation)
+2. [Basic API Usage](#basic-api-usage)
+3. [Advanced Genetic Operations](#advanced-genetic-operations)
+4. [Supported Benchmarks](#supported-benchmarks)
 
 ## Introduction
 EvoGP is a fully GPU-accelerated Tree-based Genetic Programming (TGP) framework built on PyTorch, leveraging custom CUDA kernels for core evolutionary operations like tree generation, mutation, crossover, and fitness evaluation. It supports multi-output trees and includes built-in tools for symbolic regression, policy optimization, and classification, along with standardized benchmarks for evaluation and tuning. EvoGP combines the flexibility of Python with the computational power of GPUs, making it an ideal platform for TGP research and applications.
