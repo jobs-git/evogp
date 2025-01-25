@@ -81,8 +81,11 @@ setup(
         "scikit_learn",
         "networkx",
         "sympy",
-        # "pygraphviz"
     ],
+    extras_require={
+        "visualize": ["pygraphviz"],
+        "brax": ["jax", "brax"],
+    },
     include_package_data=True,
     python_requires=">=3.9",
 )
