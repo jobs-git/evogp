@@ -397,7 +397,7 @@ We warmly welcome community developers to contribute to EvoGP and look forward t
 If you use EvoGP in your research and want to cite it in your work, please use:
 ```
 @misc{wang2025evogpgpuacceleratedframeworktreebased,
-      title={EvoGP: A GPU-accelerated Framework for Tree-Based Genetic Programming}, 
+      title={EvoGP: A GPU-accelerated Framework for Tree-based Genetic Programming}, 
       author={Lishuang Wang and Zhihong Wu and Kebin Sun and Zhuozhao Li and Ran Cheng},
       year={2025},
       eprint={2501.17168},
