@@ -23,7 +23,7 @@
 
 
 <p align="center">
-🌟 EvoGP: A GPU-accelerated Framework for Tree-Based Genetic Programming 🌟
+🌟 EvoGP: A GPU-accelerated Framework for Tree-based Genetic Programming 🌟
 </p>
 
 <p align="center">
