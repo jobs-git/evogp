@@ -27,8 +27,8 @@
 </p>
 
 <p align="center">
-  <a href="https://arxiv.org/abs/">
-    <img src="https://img.shields.io/badge/paper-arxiv-red?style=for-the-badge" alt="TensorNEAT Paper on arXiv">
+  <a href="https://arxiv.org/abs/2501.17168">
+    <img src="https://img.shields.io/badge/paper-arxiv-red?style=for-the-badge" alt="EvoGP Paper on arXiv">
   </a>
 </p>
 
@@ -396,4 +396,13 @@ We warmly welcome community developers to contribute to EvoGP and look forward t
 
 If you use EvoGP in your research and want to cite it in your work, please use:
 ```
+@misc{wang2025evogpgpuacceleratedframeworktreebased,
+      title={EvoGP: A GPU-accelerated Framework for Tree-Based Genetic Programming}, 
+      author={Lishuang Wang and Zhihong Wu and Kebin Sun and Zhuozhao Li and Ran Cheng},
+      year={2025},
+      eprint={2501.17168},
+      archivePrefix={arXiv},
+      primaryClass={cs.NE},
+      url={https://arxiv.org/abs/2501.17168}, 
+}
 ```
