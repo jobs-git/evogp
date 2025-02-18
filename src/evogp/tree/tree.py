@@ -256,9 +256,6 @@ class Tree:
         agraph.close()
 
     def to_sympy_expr(self, symbol_names=None):
-        assert (
-            self.output_len == 1
-        ), "Currently, only support single output tree to sympy expression."
         node_value, node_type, subtree_size = to_numpy(
             [self.node_value, self.node_type, self.subtree_size]
         )
@@ -266,29 +263,61 @@ class Tree:
         if symbol_names is not None:
             x = sp.symbols(symbol_names, real=True)
         else:
-            x = sp.symbols(f"x0:{self.input_len}", real=True)
-        tree_size = subtree_size[0]
-        operents = []
-        for i in range(tree_size - 1, -1, -1):
-            t, v = node_type[i], node_value[i]
-            if t == NType.VAR:
-                operents.append(x[int(v)])
-            elif t == NType.CONST:
-                operents.append(v)
-            else:  # Function
-                if t == NType.UFUNC:
-                    mid = operents.pop(-1)
-                    res = SYMPY_MAP[int(v)](mid)
-                elif t == NType.BFUNC:
-                    left = operents.pop(-1)
-                    right = operents.pop(-1)
-                    res = SYMPY_MAP[int(v)](left, right)
-                elif t == NType.TFUNC:
-                    left = operents.pop(-1)
-                    mid = operents.pop(-1)
-                    right = operents.pop(-1)
-                    res = SYMPY_MAP[int(v)](left, mid, right)
-
-                operents.append(res)
-
-        return operents[0]
+            x = sp.symbols(f"x:{self.input_len}", real=True)
+        expr_stack = []
+        if self.output_len == 1:
+            for i in reversed(range(tree_size)):
+                t, v = node_type[i], node_value[i]
+                if t == NType.VAR:
+                    expr_stack.append(x[int(v)])
+                elif t == NType.CONST:
+                    expr_stack.append(v)
+                else:  # Function
+                    if t == NType.UFUNC:
+                        mid = expr_stack.pop(-1)
+                        res = SYMPY_MAP[v](mid)
+                    elif t == NType.BFUNC:
+                        left = expr_stack.pop(-1)
+                        right = expr_stack.pop(-1)
+                        res = SYMPY_MAP[v](left, right)
+                    elif t == NType.TFUNC:
+                        left = expr_stack.pop(-1)
+                        mid = expr_stack.pop(-1)
+                        right = expr_stack.pop(-1)
+                        res = SYMPY_MAP[v](left, mid, right)
+                    expr_stack.append(res)
+            return expr_stack[0]
+        if self.output_len > 1:
+            expr = [0] * self.output_len
+            for i in reversed(range(tree_size)):
+                t, v = node_type[i], node_value[i]
+                if t & NType.OUT_NODE:
+                    out_idx = v.view(np.int32) >> 16
+                    v = v.view(np.int32) & 0xFF
+                else:
+                    out_idx = -1
+                t = t & NType.TYPE_MASK
+                
+                if t == NType.VAR:
+                    expr_stack.append(x[int(v)])
+                elif t == NType.CONST:
+                    expr_stack.append(v)
+                else:  # Function
+                    if t == NType.UFUNC:
+                        mid = expr_stack.pop(-1)
+                        res = SYMPY_MAP[v](mid)
+                    elif t == NType.BFUNC:
+                        left = expr_stack.pop(-1)
+                        right = expr_stack.pop(-1)
+                        res = SYMPY_MAP[v](left, right)
+                    elif t == NType.TFUNC:
+                        left = expr_stack.pop(-1)
+                        mid = expr_stack.pop(-1)
+                        right = expr_stack.pop(-1)
+                        res = SYMPY_MAP[v](left, mid, right)
+                    if out_idx != -1:
+                        expr[out_idx] += res
+                        expr_stack.append(right)
+                    else:
+                        expr_stack.append(res)
+            return expr

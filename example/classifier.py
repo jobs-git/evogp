@@ -22,11 +22,11 @@ multi_output = True
 problem = Classification(multi_output, dataset="iris")
 
 descriptor = GenerateDiscriptor(
-    max_tree_len=128,
+    max_tree_len=64,
     input_len=problem.problem_dim,
     output_len=problem.solution_dim,
     using_funcs=["+", "-", "*", "/"],
-    max_layer_cnt=5,
+    max_layer_cnt=4,
     const_samples=[-1, 0, 1],
 )
 
@@ -46,4 +46,8 @@ pipeline = StandardPipeline(
     generation_limit=100,
 )
 
-pipeline.run()
+best = pipeline.run()
+
+best.to_png("./imgs/classifier_tree.png")
+sympy_expression = best.to_sympy_expr()
+print(sympy_expression)
