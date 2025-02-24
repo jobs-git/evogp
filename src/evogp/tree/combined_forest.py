@@ -7,7 +7,7 @@ import numpy as np
 from evogp.tree.utils import check_tensor
 
 from .forest import Forest
-from .descriptor import GenerateDiscriptor
+from .descriptor import GenerateDescriptor
 from .combined_tree import CombinedTree
 
 
@@ -34,9 +34,9 @@ class CombinedForest:
     def random_generate(
         pop_size: int,
         data_info: dict,
-        descriptors: Union[List, GenerateDiscriptor],
+        descriptors: Union[List, GenerateDescriptor],
     ):
-        if isinstance(descriptors, GenerateDiscriptor):
+        if isinstance(descriptors, GenerateDescriptor):
             descriptors = [descriptors] * len(data_info)
 
         assert isinstance(descriptors, list) and len(descriptors) == len(

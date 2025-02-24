@@ -39,7 +39,7 @@ def check_tree_length(max_tree_len, using_funcs, max_layer_cnt, layer_leaf_prob)
     return depth2leaf_probs
 
 
-class GenerateDiscriptor:
+class GenerateDescriptor:
     def __init__(
         self,
         max_tree_len: int,

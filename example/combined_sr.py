@@ -1,5 +1,5 @@
 import torch
-from evogp.tree import CombinedForest, GenerateDiscriptor
+from evogp.tree import CombinedForest, GenerateDescriptor
 from evogp.algorithm import (
     GeneticProgramming,
     DefaultSelection,
@@ -33,7 +33,7 @@ XOR_OUTPUTS = torch.tensor(
 problem = SymbolicRegression(datapoints=XOR_INPUTS, labels=XOR_OUTPUTS, execute_mode="torch")
 
 # create decriptor for generating new trees
-descriptor = GenerateDiscriptor(
+descriptor = GenerateDescriptor(
     max_tree_len=32,
     input_len=problem.problem_dim,
     output_len=problem.solution_dim,

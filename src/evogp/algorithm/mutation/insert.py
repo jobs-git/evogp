@@ -3,7 +3,7 @@ import torch
 from torch import Tensor
 
 from .base import BaseMutation
-from ...tree import Forest, MAX_STACK, randint, GenerateDiscriptor
+from ...tree import Forest, MAX_STACK, randint, GenerateDescriptor
 from .mutation_utils import vmap_subtree
 
 
@@ -17,12 +17,12 @@ class InsertMutation(BaseMutation):
     def __init__(
         self,
         mutation_rate: float,
-        descriptor: GenerateDiscriptor,
+        descriptor: GenerateDescriptor,
     ):
         """
         Args:
             mutation_rate (float): The probability of each individual undergoing mutation. Should be between 0 and 1.
-            descriptor (GenerateDiscriptor): The descriptor used to generate random subtrees for mutation.
+            descriptor (GenerateDescriptor): The descriptor used to generate random subtrees for mutation.
         """
         self.mutation_rate = mutation_rate
         self.descriptor = descriptor

@@ -4,7 +4,7 @@ torch.random.manual_seed(0)
 torch.cuda.manual_seed(0)
 
 from evogp.pipeline import StandardPipeline
-from evogp.tree import Forest, GenerateDiscriptor
+from evogp.tree import Forest, GenerateDescriptor
 from evogp.algorithm import (
     GeneticProgramming,
     DefaultSelection,
@@ -23,12 +23,12 @@ problem = SymbolicRegression(
     func=func, num_inputs=2, num_data=1000, lower_bounds=-5, upper_bounds=5
 )
 
-descriptor = GenerateDiscriptor(
+descriptor = GenerateDescriptor(
     max_tree_len=128,
     input_len=problem.problem_dim,
     output_len=problem.solution_dim,
     using_funcs=["+", "-", "*", "/"],
-    max_layer_cnt=5,
+    max_layer_cnt=6,
     const_samples=[-1, 0, 1],
 )
 
@@ -40,6 +40,7 @@ algorithm = GeneticProgramming(
         mutation_rate=0.2, descriptor=descriptor.update(max_layer_cnt=3)
     ),
     selection=DefaultSelection(survival_rate=0.3, elite_rate=0.01),
+    enable_pareto_front=True,
 )
 
 pipeline = StandardPipeline(
@@ -48,4 +49,9 @@ pipeline = StandardPipeline(
     generation_limit=100,
 )
 
-pipeline.run()
+best = pipeline.run()
+
+sympy_expression = best.to_sympy_expr()
+print(sympy_expression)
+
+print(algorithm.pareto_front)

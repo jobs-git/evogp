@@ -114,7 +114,7 @@ Start your journey with EvoGP in a few simple steps:
 1. **Import necessary modules**:
 ```python
 import torch
-from evogp.tree import Forest, GenerateDiscriptor
+from evogp.tree import Forest, GenerateDescriptor
 from evogp.algorithm import (
     GeneticProgramming,
     DefaultSelection,
@@ -155,7 +155,7 @@ problem = SymbolicRegression(datapoints=XOR_INPUTS, labels=XOR_OUTPUTS)
 
 ```python
 # create decriptor for generating new trees
-descriptor = GenerateDiscriptor(
+descriptor = GenerateDescriptor(
     max_tree_len=32,
     input_len=problem.problem_dim,
     output_len=problem.solution_dim,
@@ -331,7 +331,7 @@ Once you create your problem, you can use the following code to solve them:
 ```python
 problem = YOUR_HAVE_ALREADY_CREATED_IT
 
-from evogp.tree import Forest, GenerateDiscriptor
+from evogp.tree import Forest, GenerateDescriptor
 from evogp.algorithm import (
     GeneticProgramming,
     DefaultSelection,
@@ -340,7 +340,7 @@ from evogp.algorithm import (
 )
 from evogp.pipeline import StandardPipeline
 
-descriptor = GenerateDiscriptor(
+descriptor = GenerateDescriptor(
     max_tree_len=128,
     input_len=problem.problem_dim,
     output_len=problem.solution_dim,

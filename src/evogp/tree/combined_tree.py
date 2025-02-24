@@ -1,7 +1,7 @@
 from typing import List, Union
 import torch
 
-from .descriptor import GenerateDiscriptor
+from .descriptor import GenerateDescriptor
 
 
 class CombinedTree:
@@ -22,7 +22,7 @@ class CombinedTree:
 
     @staticmethod
     def random_generate(
-        descriptors: Union[List, GenerateDiscriptor],
+        descriptors: Union[List, GenerateDescriptor],
         data_info: dict,
     ):
         from .combined_forest import CombinedForest

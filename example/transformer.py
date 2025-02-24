@@ -11,7 +11,7 @@ from evogp.algorithm import (
     DefaultMutation,
     DefaultCrossover,
 )
-from evogp.tree import GenerateDiscriptor
+from evogp.tree import GenerateDescriptor
 from evogp.problem import Transformation
 
 
@@ -27,7 +27,7 @@ print_color(f"Problem: {name}")
 
 problem = Transformation(dataset=name)
 
-descriptor = GenerateDiscriptor(
+descriptor = GenerateDescriptor(
     max_tree_len=128,
     input_len=transformation_problem[name]["input_len"],
     output_len=1,

@@ -3,7 +3,7 @@ from torch import Tensor
 import sympy as sp
 
 from .utils import *
-from .descriptor import GenerateDiscriptor
+from .descriptor import GenerateDescriptor
 
 
 class Tree:
@@ -34,7 +34,7 @@ class Tree:
         self.subtree_size = subtree_size
 
     @staticmethod
-    def random_generate(descriptor: GenerateDiscriptor):
+    def random_generate(descriptor: GenerateDescriptor):
         # Delayed import to avoid circular dependency with the Forest class
         from .forest import Forest
 
@@ -139,25 +139,26 @@ class Tree:
             self.subtree_size[None, :],
         )
 
-    def __str__(self):
-        value, node_type, subtree_size = to_numpy(
-            [self.node_value, self.node_type, self.subtree_size]
-        )
-        res = ""
-        for i in range(0, subtree_size[0]):
-            if (
-                (node_type[i] == NType.UFUNC)
-                or (node_type[i] == NType.BFUNC)
-                or (node_type[i] == NType.TFUNC)
-            ):
-                res = res + FUNCS_NAMES[int(value[i])]
-            elif node_type[i] == NType.VAR:
-                res = res + f"x[{int(value[i])}]"
-            elif node_type[i] == NType.CONST:
-                res = res + f"{value[i]:.2f}"
-            res += " "
+    def __repr__(self):
+        return self.to_sympy_expr().__repr__()
+        # value, node_type, subtree_size = to_numpy(
+        #     [self.node_value, self.node_type, self.subtree_size]
+        # )
+        # res = ""
+        # for i in range(0, subtree_size[0]):
+        #     if (
+        #         (node_type[i] == NType.UFUNC)
+        #         or (node_type[i] == NType.BFUNC)
+        #         or (node_type[i] == NType.TFUNC)
+        #     ):
+        #         res = res + FUNCS_NAMES[int(value[i])]
+        #     elif node_type[i] == NType.VAR:
+        #         res = res + f"x{int(value[i])}"
+        #     elif node_type[i] == NType.CONST:
+        #         res = res + f"{value[i]:.2f}"
+        #     res += " "
 
-        return res
+        # return res
 
     def to_infix(self):
         if self.output_len != 1:
@@ -170,7 +171,7 @@ class Tree:
         stack = []
         for t, v in zip(node_type, node_val):
             if t == NType.VAR:
-                stack.append(f"x[{int(v)}]")
+                stack.append(f"x{int(v)}")
             elif t == NType.CONST:
                 stack.append(f"{v:.2f}")
             elif t == NType.UFUNC:
@@ -206,7 +207,7 @@ class Tree:
             node_label = f"{node_val:.2f}"
             child_remain = 0
         elif node_type == NType.VAR:
-            node_label = f"x[{int(node_val)}]"
+            node_label = f"x{int(node_val)}"
             child_remain = 0
         elif node_type == NType.UFUNC:
             if output_index == -1:

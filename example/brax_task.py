@@ -5,7 +5,7 @@ import torch
 torch.random.manual_seed(0)
 torch.cuda.manual_seed(0)
 
-from evogp.tree import Forest, GenerateDiscriptor
+from evogp.tree import Forest, GenerateDescriptor
 from evogp.algorithm import (
     GeneticProgramming,
     DefaultSelection,
@@ -19,7 +19,7 @@ problem = BraxProblem(
     max_episode_length=1000,
 )
 
-descriptor = GenerateDiscriptor(
+descriptor = GenerateDescriptor(
     max_tree_len=128,
     input_len=problem.problem_dim,
     output_len=problem.solution_dim,

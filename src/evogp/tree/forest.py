@@ -5,7 +5,7 @@ from torch import Tensor
 import numpy as np
 from .utils import *
 from .tree import Tree
-from .descriptor import GenerateDiscriptor
+from .descriptor import GenerateDescriptor
 
 
 class Forest:
@@ -42,7 +42,7 @@ class Forest:
     @staticmethod
     def random_generate(
         pop_size: int,
-        descriptor: GenerateDiscriptor,
+        descriptor: GenerateDescriptor,
     ) -> "Forest":
         assert (
             isinstance(pop_size, int) and pop_size > 0
@@ -78,6 +78,32 @@ class Forest:
         return Forest(
             descriptor.input_len,
             descriptor.output_len,
+            batch_node_value,
+            batch_node_type,
+            batch_subtree_size,
+        )
+
+    @staticmethod
+    def zero_forest(
+        pop_size: int,
+        max_tree_len: int,
+        input_len: int,
+        output_len: int,
+    ):
+        batch_node_value = torch.zeros(
+            (pop_size, max_tree_len), dtype=torch.float32, device="cuda"
+        )
+        batch_node_type = torch.zeros(
+            (pop_size, max_tree_len), dtype=torch.int16, device="cuda"
+        )
+        batch_subtree_size = torch.zeros(
+            (pop_size, max_tree_len), dtype=torch.int16, device="cuda"
+        )
+        batch_node_type[:, 0] = NType.CONST
+        batch_subtree_size[:, 0] = 1
+        return Forest(
+            input_len,
+            output_len,
             batch_node_value,
             batch_node_type,
             batch_subtree_size,
@@ -340,7 +366,7 @@ class Forest:
         return res
 
     def __getitem__(self, index):
-        if isinstance(index, int):
+        if isinstance(index, int) or (hasattr(index, "shape") and index.shape == ()):
             return Tree(
                 self.input_len,
                 self.output_len,
@@ -420,7 +446,7 @@ class Forest:
     def __add__(self, other):
         assert other.input_len == self.input_len
         assert other.output_len == self.output_len
-            
+
         if isinstance(other, Forest):
             return Forest(
                 self.input_len,

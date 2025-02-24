@@ -3,7 +3,7 @@ import torch
 from torch import Tensor
 
 from .base import BaseMutation
-from ...tree import Forest, MAX_STACK, randint, NType, GenerateDiscriptor
+from ...tree import Forest, MAX_STACK, randint, NType, GenerateDescriptor
 
 
 class MultiPointMutation(BaseMutation):
@@ -17,13 +17,13 @@ class MultiPointMutation(BaseMutation):
     def __init__(
         self,
         mutation_rate: float,
-        descriptor: GenerateDiscriptor,
+        descriptor: GenerateDescriptor,
         mutation_intensity: float = 0.3,
     ):
         """
         Args:
             mutation_rate (float): The probability of each individual undergoing mutation.
-            descriptor (GenerateDiscriptor): The descriptor used to generate random subtrees for mutation.
+            descriptor (GenerateDescriptor): The descriptor used to generate random subtrees for mutation.
             mutation_intensity (float): Determines the proportion of nodes in the tree that will be mutated. 
                                         It is a fraction between 0 and 1.
         """

@@ -3,14 +3,14 @@ import torch
 from torch import Tensor
 
 from . import BaseMutation, DefaultMutation
-from ...tree import CombinedForest, MAX_STACK, GenerateDiscriptor
+from ...tree import CombinedForest, MAX_STACK, GenerateDescriptor
 
 
 class CombinedDefaultMutation(BaseMutation):
     def __init__(
         self,
         mutation_rate: float,
-        descriptors: Union[List, GenerateDiscriptor],
+        descriptors: Union[List, GenerateDescriptor],
     ):
         # lazy load pattern
         self.pattern_num = None
@@ -34,7 +34,7 @@ class CombinedDefaultMutation(BaseMutation):
     def load_pattern_num(self, current_pattern_num):
         if self.pattern_num is None:
             self.pattern_num = current_pattern_num
-            if isinstance(self.descriptors, GenerateDiscriptor):
+            if isinstance(self.descriptors, GenerateDescriptor):
                 self.descriptors = [self.descriptors] * self.pattern_num
             elif isinstance(self.descriptors, list):
                 assert (
