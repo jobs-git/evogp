@@ -40,7 +40,7 @@ setup(
     name="evogp",
     version="0.1.0",
     author="Zhihong Wu, Lishuang Wang, Kebin Sun",
-    author_email="zhihong2718@gmai.com",
+    author_email="zhihong2718@gmail.com",
     description="Evolutionary Genetic Programming with CUDA-based GPU acceleration.",
     long_description=long_description,
     long_description_content_type="text/markdown",
