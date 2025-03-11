@@ -10,6 +10,8 @@ from evogp.algorithm import (
     DefaultSelection,
     DefaultMutation,
     DefaultCrossover,
+    CombinedMutation,
+    DeleteMutation,
 )
 from evogp.problem import SymbolicRegression
 
@@ -20,7 +22,7 @@ def func(x):
 
 
 problem = SymbolicRegression(
-    func=func, num_inputs=2, num_data=1000, lower_bounds=-5, upper_bounds=5
+    func=func, num_inputs=2, num_data=100, lower_bounds=-5, upper_bounds=5
 )
 
 descriptor = GenerateDescriptor(
@@ -28,25 +30,31 @@ descriptor = GenerateDescriptor(
     input_len=problem.problem_dim,
     output_len=problem.solution_dim,
     using_funcs=["+", "-", "*", "/"],
-    max_layer_cnt=6,
+    max_layer_cnt=7,
     const_samples=[-1, 0, 1],
+    layer_leaf_prob=0,
 )
 
 
 algorithm = GeneticProgramming(
     initial_forest=Forest.random_generate(pop_size=1000, descriptor=descriptor),
     crossover=DefaultCrossover(),
-    mutation=DefaultMutation(
-        mutation_rate=0.2, descriptor=descriptor.update(max_layer_cnt=3)
+    mutation=CombinedMutation(
+        [
+            DefaultMutation(
+                mutation_rate=0.2, descriptor=descriptor.update(max_layer_cnt=3)
+            ),
+            DeleteMutation(mutation_rate=0.8),
+        ]
     ),
     selection=DefaultSelection(survival_rate=0.3, elite_rate=0.01),
-    enable_pareto_front=True,
+    enable_pareto_front=False,
 )
 
 pipeline = StandardPipeline(
     algorithm,
     problem,
-    generation_limit=100,
+    generation_limit=300,
 )
 
 best = pipeline.run()

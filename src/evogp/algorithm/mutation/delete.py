@@ -9,8 +9,8 @@ from .mutation_utils import vmap_subtree
 
 class DeleteMutation(BaseMutation):
     """
-    DeleteMutation implements a mutation strategy where a randomly selected non-leaf node in the tree 
-    has one of its child subtrees removed. This deletion effectively removes part of the individual’s 
+    DeleteMutation implements a mutation strategy where a randomly selected non-leaf node in the tree
+    has one of its child subtrees removed. This deletion effectively removes part of the individual’s
     genetic material, modifying the structure of the tree.
     """
 
@@ -28,7 +28,7 @@ class DeleteMutation(BaseMutation):
         """
         Perform mutation by removing a randomly selected basic operator from the individual’s tree.
 
-        The mutation process involves selecting a non-leaf node in the tree and removing one of its child subtrees 
+        The mutation process involves selecting a non-leaf node in the tree and removing one of its child subtrees
         to modify the individual's genetic material.
 
         Args:
@@ -37,7 +37,7 @@ class DeleteMutation(BaseMutation):
         Returns:
             Forest: The updated population after mutation, where some individuals have undergone deletion of a subtree.
         """
-        # Determine which trees need to mutate based on the mutation rate, 
+        # Determine which trees need to mutate based on the mutation rate,
         # ensuring the tree has more than one node to allow for deletion.
         mutate_indices = (
             torch.rand(forest.pop_size, device="cuda") < self.mutation_rate
@@ -75,11 +75,10 @@ class DeleteMutation(BaseMutation):
 
         # Determine the number of children for the selected mutation positions
         num_mutate = forest_to_mutate.pop_size
-        child_nums = (
-            forest_to_mutate.batch_node_type[torch.arange(num_mutate), mutate_positions]
-            - NType.UFUNC
-            + 1
-        )
+        mutate_type = forest_to_mutate.batch_node_type[
+            torch.arange(num_mutate), mutate_positions
+        ]
+        child_nums = (mutate_type & NType.TYPE_MASK) - NType.UFUNC + 1
         # Select a random child to delete
         nth_childs = randint(
             size=(num_mutate,),

@@ -10,8 +10,11 @@ from evogp.algorithm import (
     DefaultSelection,
     DefaultMutation,
     DefaultCrossover,
+    CombinedMutation,
+    DeleteMutation,
 )
 from evogp.problem import Classification
+
 
 
 dataset_name = ["iris", "wine", "breast_cancer", "digits"]
@@ -34,8 +37,13 @@ descriptor = GenerateDescriptor(
 algorithm = GeneticProgramming(
     initial_forest=Forest.random_generate(pop_size=1000, descriptor=descriptor),
     crossover=DefaultCrossover(),
-    mutation=DefaultMutation(
-        mutation_rate=0.2, descriptor=descriptor.update(max_layer_cnt=3)
+        mutation=CombinedMutation(
+        [
+            DefaultMutation(
+                mutation_rate=0.2, descriptor=descriptor.update(max_layer_cnt=3)
+            ),
+            DeleteMutation(mutation_rate=0.8),
+        ]
     ),
     selection=DefaultSelection(survival_rate=0.3, elite_rate=0.01),
     enable_pareto_front=True,

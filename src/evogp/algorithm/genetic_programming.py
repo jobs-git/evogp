@@ -8,9 +8,9 @@ from evogp.tree import Forest
 class ParetoFront:
     def __init__(self, size, forest_descriptor):
         self.fitness = torch.full(
-            (size,), torch.finfo(torch.float32).min, dtype=torch.float32, device="cuda"
+            (size,), float("-inf"), dtype=torch.float32, device="cuda"
         )
-        self.solution = Forest.zero_forest(size, *forest_descriptor)
+        self.solution = Forest.zero_generate(size, *forest_descriptor)
 
     def __str__(self):
         result = []

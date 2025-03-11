@@ -84,7 +84,7 @@ class Forest:
         )
 
     @staticmethod
-    def zero_forest(
+    def zero_generate(
         pop_size: int,
         max_tree_len: int,
         input_len: int,
