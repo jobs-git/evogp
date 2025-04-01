@@ -65,7 +65,7 @@ class DefaultSelection(BaseSelection):
         sorted_fitness, sorted_indices = torch.sort(fitness, descending=True)
 
         # Select the indices of the surviving individuals and elite individuals.
-        survivor_indices = sorted_indices[:survive_cnt]
-        elite_indices = sorted_indices[:elite_cnt]
+        survivor_indices = sorted_indices[:survive_cnt].to(dtype=torch.int32)
+        elite_indices = sorted_indices[:elite_cnt].to(dtype=torch.int32)
 
         return elite_indices, survivor_indices

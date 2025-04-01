@@ -17,12 +17,14 @@ class DeleteMutation(BaseMutation):
     def __init__(
         self,
         mutation_rate: float,
+        max_mutatable_size: Optional[int] = None,
     ):
         """
         Args:
             mutation_rate (float): The probability of each individual undergoing mutation. Should be between 0 and 1.
         """
         self.mutation_rate = mutation_rate
+        self.max_mutatable_size = max_mutatable_size
 
     def __call__(self, forest: Forest):
         """
@@ -67,6 +69,8 @@ class DeleteMutation(BaseMutation):
             random = random * mask
             # Mask out the leaf nodes
             random = torch.where(size_tensor == 1, 0, random)
+            if self.max_mutatable_size:
+                random = torch.where(size_tensor > self.max_mutatable_size, 0, random)
             return torch.argmax(random, 1)
 
         # Choose non-leaf positions to perform mutation

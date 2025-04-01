@@ -25,7 +25,6 @@ class MultiConstMutation(BaseMutation):
             mutation_rate (float): The probability of each individual undergoing mutation.
             descriptor (GenerateDescriptor): The descriptor used to generate random subtrees for mutation.
             mutation_intensity (float): The proportion of constant nodes in the tree that will be mutated. 
-                                        It is a fraction between 0 and 1.
         """
         self.mutation_rate = mutation_rate
         self.descriptor = descriptor

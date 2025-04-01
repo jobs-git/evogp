@@ -2,7 +2,7 @@ import warnings
 from typing import Optional, Tuple, Union
 import torch
 from torch import Tensor
-from .utils import MAX_STACK, MAX_FULL_DEPTH, dict2cdf, check_tensor, FUNCS_NAMES, Func
+from .utils import MAX_STACK, MAX_FULL_DEPTH, dict2prob, check_tensor, FUNCS_NAMES, Func
 
 
 def check_tree_length(max_tree_len, using_funcs, max_layer_cnt, layer_leaf_prob):
@@ -103,12 +103,40 @@ class GenerateDescriptor:
             if isinstance(using_funcs, list):
                 using_funcs = {f: 1.0 for f in using_funcs}
 
-            roulette_funcs = torch.tensor(
-                dict2cdf(using_funcs),
+            func_prob = dict2prob(using_funcs)
+            roulette_funcs = torch.cumsum(
+                func_prob,
+                dim=0,
                 dtype=torch.float32,
-                device="cuda",
-                requires_grad=False,
-            )
+            ).to("cuda")
+
+            tfunc_prob = torch.zeros_like(func_prob)
+            tfunc_prob[Func.TF_START : Func.BF_START] = func_prob[
+                Func.TF_START : Func.BF_START
+            ]
+            roulette_tfuncs = torch.cumsum(
+                tfunc_prob,
+                dim=0,
+                dtype=torch.float32,
+            ).to("cuda")
+
+            bfunc_prob = torch.zeros_like(func_prob)
+            bfunc_prob[Func.BF_START : Func.UF_START] = func_prob[
+                Func.BF_START : Func.UF_START
+            ]
+            roulette_bfuncs = torch.cumsum(
+                bfunc_prob,
+                dim=0,
+                dtype=torch.float32,
+            ).to("cuda")
+
+            ufunc_prob = torch.zeros_like(func_prob)
+            ufunc_prob[Func.UF_START : Func.END] = func_prob[Func.UF_START : Func.END]
+            roulette_ufuncs = torch.cumsum(
+                ufunc_prob,
+                dim=0,
+                dtype=torch.float32,
+            ).to("cuda")
 
         if const_samples is None:
             assert (
@@ -150,6 +178,9 @@ class GenerateDescriptor:
         self.out_prob = out_prob
         self.depth2leaf_probs = depth2leaf_probs
         self.roulette_funcs = roulette_funcs
+        self.roulette_ufuncs = roulette_ufuncs
+        self.roulette_bfuncs = roulette_bfuncs
+        self.roulette_tfuncs = roulette_tfuncs
         self.const_samples = const_samples
 
     def update(self, **kwargs):

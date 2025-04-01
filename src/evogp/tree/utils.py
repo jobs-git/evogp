@@ -22,7 +22,7 @@ class NType:
     BFUNC = 3  # binary function
     TFUNC = 4  # ternary function
     TYPE_MASK = 0x7F  # node type mask
-    OUT_NODE = 1 << 7  # out node flag
+    OUT_NODE = 1 << 7  # out node fl ag
     UFUNC_OUT = UFUNC + OUT_NODE  # unary function, output node
     BFUNC_OUT = BFUNC + OUT_NODE  # binary function, output node
     TFUNC_OUT = TFUNC + OUT_NODE  # ternary function, output node
@@ -33,8 +33,10 @@ class Func:
     The enumeration class for GP function types.
     """
 
+    TF_START = 0
     IF = 0
 
+    BF_START = 1
     ADD = 1
     SUB = 2
     MUL = 3
@@ -49,6 +51,7 @@ class Func:
     LE = 12
     GE = 13
 
+    UF_START = 14
     SIN = 14
     COS = 15
     TAN = 16
@@ -64,6 +67,7 @@ class Func:
     ABS = 26
     SQRT = 27
     LOOSE_SQRT = 28
+
     END = 29
 
 
@@ -247,13 +251,6 @@ def dict2prob(prob_dict):
     return prob
 
 
-def dict2cdf(prob_dict):
-    # Probability Dictionary to Cumulative Distribution Function
-    prob = dict2prob(prob_dict)
-
-    return np.cumsum(prob)
-
-
 def to_numpy(li):
     for idx, e in enumerate(li):
         if type(e) == torch.Tensor:
@@ -265,7 +262,7 @@ def dict2prob(prob_dict):
     # Probability Dictionary to Distribution Function
     assert len(prob_dict) > 0, "Empty probability dictionary"
 
-    prob = np.zeros(len(FUNCS))
+    prob = torch.zeros(len(FUNCS))
 
     for key, val in prob_dict.items():
         assert (
@@ -278,13 +275,6 @@ def dict2prob(prob_dict):
     prob = prob / prob.sum()
 
     return prob
-
-
-def dict2cdf(prob_dict):
-    # Probability Dictionary to Cumulative Distribution Function
-    prob = dict2prob(prob_dict)
-
-    return np.cumsum(prob)
 
 
 def check_tensor(x):
@@ -313,7 +303,7 @@ def str_tree(value, node_type, subtree_size):
     return res
 
 
-def randint(size, low, high, dtype=torch.int64, device="cuda", requires_grad=False):
+def randint(size, low, high, dtype=torch.int32, device="cuda", requires_grad=False):
     random = low + torch.rand(size, device=device, requires_grad=requires_grad) * (
         high - low
     )
