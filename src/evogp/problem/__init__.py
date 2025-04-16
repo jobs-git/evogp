@@ -4,3 +4,4 @@ from .classification import Classification
 from .transformation import Transformation
 from .brax_problem import BraxProblem
 from .genesis_problem import GenesisProblem
+from .mujoco_playground import MujocoProblem
