@@ -98,7 +98,7 @@ You can find more details on the [PyTorch installation page](https://pytorch.org
 ### 4. Install EvoGP  
 Finally, install EvoGP:  
 ```bash
-pip install git+https://github.com/EMI-Group/evogp.git
+pip install git+https://github.com/EMI-Group/evogp.git --no-build-isolation
 ```
 **Note:** This process might take a significant amount of time, as it includes the compilation of CUDA kernels.
 
