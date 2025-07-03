@@ -391,18 +391,3 @@ We warmly welcome community developers to contribute to EvoGP and look forward t
 3. Thanks to the following projects for their valuable contributions to GP research, which provided inspiration and guidance for EvoGP's design: [DEAP](https://github.com/DEAP/deap), [gplearn](https://github.com/trevorstephens/gplearn), [Karoo GP](https://github.com/kstaats/karoo_gp), [TensorGP](https://github.com/cdvetal/TensorGP) and [SymbolicRegressionGPU](https://github.com/RayZhhh/SymbolicRegressionGPU).
 4. Thanks to [scikit-learn](https://github.com/scikit-learn/scikit-learn) and [Brax](https://github.com/google/brax) for their benchmarking frameworks, which have provided a convenient environment for performance evaluation in EvoGP.
 5. Thanks to [EvoX](https://github.com/EMI-Group/evox) for providing a flexible framework that allows EvoGP to integrate with other evolutionary algorithms, expanding its potential.
-
-## Citing EvoGP
-
-If you use EvoGP in your research and want to cite it in your work, please use:
-```
-@misc{wang2025evogpgpuacceleratedframeworktreebased,
-      title={EvoGP: A GPU-accelerated Framework for Tree-based Genetic Programming}, 
-      author={Lishuang Wang and Zhihong Wu and Kebin Sun and Zhuozhao Li and Ran Cheng},
-      year={2025},
-      eprint={2501.17168},
-      archivePrefix={arXiv},
-      primaryClass={cs.NE},
-      url={https://arxiv.org/abs/2501.17168}, 
-}
-```
