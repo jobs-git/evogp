@@ -244,7 +244,7 @@ torch::Tensor tree_SR_fitness(
     torch::Tensor subtree_size,
     torch::Tensor variables,
     torch::Tensor labels,
-    int64_t kernel_type = 0
+    int64_t kernel_type = 4
 ){
     // check parameters
     TORCH_CHECK(pop_size > 0, "pop_size must larger than 0, but got ", pop_size);
