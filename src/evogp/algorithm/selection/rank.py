@@ -6,7 +6,7 @@ from .base import BaseSelection
 
 
 class RankSelection(BaseSelection):
-    """
+    r"""
     RankSelection implements a selection strategy based on fitness rank and selection pressure.
 
     Individuals are sorted by fitness, and their selection probabilities are calculated using the following formula:

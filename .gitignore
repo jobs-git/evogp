@@ -53,3 +53,4 @@ experiment/*
 experiment/data/*
 src/evogp/cuda/forward_new.cu
 .env
+example/new_exp.py
