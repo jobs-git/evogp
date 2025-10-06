@@ -372,32 +372,38 @@ void evaluate(
 
 constexpr auto SR_BLOCK_SIZE = 1024;
 
-template <bool multiOutput = false, bool useMSE = true>
+// actually a smape
+template <bool multiOutput = false, bool useMSE = true>  // useMSE is ignored
 __device__ inline float calculate_fit(
     int top,
     const float *stack,
     const float *s_outs,
     const float *i_labels,
     const unsigned int outLen = 1) {
-    float fit = .0f;
+
+    float fit = 0.0f;
+    const float eps = 1e-8f;
+
     if constexpr (multiOutput) {
         for (int i = 0; i < outLen; i++) {
-            float diff = i_labels[i] - s_outs[i];
-            if constexpr (useMSE)
-                fit += diff * diff;
-            else
-                fit += std::abs(diff); // abs
+            float pred = s_outs[i];
+            float label = i_labels[i];
+            float numerator = fabsf(pred - label);
+            float denominator = (fabsf(pred) + fabsf(label)) * 0.5f;
+            fit += numerator / (denominator + eps);
         }
+        fit = 100.0f * fit / outLen;  // average SMAPE over outputs
     } else {
         float output_value = stack[--top];
-        float diff = i_labels[0] - output_value;
-        if constexpr (useMSE)
-            fit = diff * diff;
-        else
-            fit = std::abs(diff);
+        float label = i_labels[0];
+        float numerator = fabsf(output_value - label);
+        float denominator = (fabsf(output_value) + fabsf(label)) * 0.5f;
+        fit = 100.0f * numerator / (denominator + eps);
     }
+
     return fit;
 }
+
 
 template <bool multiOutput = false, bool useMSE = true>
 __global__ void treeGPRegressionFitnessKernel(
